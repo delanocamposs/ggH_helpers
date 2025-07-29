@@ -28,7 +28,7 @@ extraOverCmsTextSize  = 0.76
 lumi_13TeV = "20.1"
 lumi_8TeV  = "19.7" 
 lumi_7TeV  = "5.1"
-lumi_sqrtS = "13 TeV"
+lumi_sqrtS = "Run-2, 13 TeV"
 
 drawLogo      = False
 

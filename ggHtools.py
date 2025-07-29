@@ -33,7 +33,7 @@ from scipy.integrate import simps
     
 
 
-def sig_bkg_histos(files, isMC, trees, selections, var, output_names, bins, histo_names=[], bkg_weight=True):
+def sig_bkg_histos(files, isMC, trees, selections, var, output_names, bins, year, histo_names=[], bkg_weight=True):
     '''
     files = path to the root data/MC files to construct the histos from
     isMC = is the file MC or not (matters because it gets weighted and scaled correctly if it is)
@@ -121,9 +121,10 @@ def sig_bkg_histos(files, isMC, trees, selections, var, output_names, bins, hist
 
                 if bkg_weight:
                     ##this weight comes from scaling PRESELECTED 4g to the sidebands of FULLY ID'd 4g data in 2018 EGamma data.
-                    bkg_w = 0.051249577845322525
                     #bkg_w = 0.9307568438
+                    bkg_w = 0.051249577845322525*(101310/59830)
                     hist_j_k.Scale(bkg_w)
+        
                 else:
                     hist_j_k.Scale(1)
 

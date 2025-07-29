@@ -18,7 +18,7 @@ def cleanup(year, finalstate, physics, cat):
     subprocess.run(["mv", f"bkg_parameters_{cat}_{year}.json", f"{cat}_{year}_{finalstate}_{physics}/"])
     subprocess.run(["mv", f"sig_parameters_{cat}_{year}.json", f"{cat}_{year}_{finalstate}_{physics}/"])
     subprocess.run(["mv", f"data_obs_{cat}_{year}.root", f"{cat}_{year}_{finalstate}_{physics}/"])
-    subprocess.run(["mv", f"datacardInputs_{physics}_{finalstate}_{cat}_{year}.root", f"{cat}_{year}_{finalstate}_{physics}/"])
+#    subprocess.run(["mv", f"datacardInputs_{physics}_{finalstate}_{cat}_{year}.root", f"{cat}_{year}_{finalstate}_{physics}/"])
     subprocess.run(["mv", f"rate_histos_{cat}_{year}.root", f"{cat}_{year}_{finalstate}_{physics}/"])
 #    subprocess.run(["mv", f"datacard_{physics}_{finalstate}_{cat}_{year}.txt", f"{cat}_{year}_{finalstate}_{physics}/"])
     
@@ -77,7 +77,8 @@ def main(paths, isMC, trees, var, categories, period, bins, finalstate="4g", phy
     #lumi unc obtained from: https://twiki.cern.ch/twiki/bin/view/CMS/LumiRecommendationsRun2
     lumi_unc={"2016":[0.012],
               "2017":[0.023],
-              "2018":[0.025]}
+              "2018":[0.025], 
+              "Run-2": [0.03397]} #Run-2 lumi unc obtained from adding in quadrature 2017 and 2018 unc
 
     xsec_quad_up = np.sqrt((xsec_unc["ggH"][0])**2+(xsec_unc["VBF"][0])**2)
     xsec_quad_down = np.sqrt((xsec_unc["ggH"][1])**2+(xsec_unc["VBF"][1])**2)
@@ -97,12 +98,12 @@ def main(paths, isMC, trees, var, categories, period, bins, finalstate="4g", phy
     selections.reverse()
     print(selections)
 
-    th1d_files, th1d_filenames, th1d_histos, th1d_histo_obj = ggHtools.sig_bkg_histos(paths, isMC, trees, selections, var, output_names, bins, histo_names, bkg_weight)
+    th1d_files, th1d_filenames, th1d_histos, th1d_histo_obj = ggHtools.sig_bkg_histos(paths, isMC, trees, selections, var, output_names, bins, year, histo_names, bkg_weight)
 
     i=0
     for cat in categories:
         bkg_rate=th1d_histo_obj[i][1].Integral()
-        dcm_cat_year = DataCardMaker(finalstate, cat, period, lumis["2018"][0], physics)
+        dcm_cat_year = DataCardMaker(finalstate, cat, period, lumis["Run-2"][0], physics)
 
         ggHfitter.fitBKG("{}".format(th1d_filenames[i]), "{}".format(th1d_histos[i][1]), "fit_bkg_{}_{}.root".format(cat, year), order=order)
         ggHtools.extract_JSON("fit_bkg_{}_{}.root".format(cat, year), "w", "bkg_parameters_{}_{}.json".format(cat, year))
@@ -118,7 +119,9 @@ def main(paths, isMC, trees, var, categories, period, bins, finalstate="4g", phy
         dcm_cat_year.addSystematic(name="nuisance_smear_{}_{}".format(cat, year), kind = "param", values=[0.0, 1.0])
 
         dcm_cat_year.addSystematic(name="xsec_unc_{}_{}".format(cat, year), kind = "lnN", values={"signal":"{}/{}".format(1+xsec_quad_up,1-xsec_quad_down)})
-        dcm_cat_year.addSystematic(name="lumi_unc_{}_{}".format(cat, year), kind = "lnN", values={"signal":"{}".format(1+lumi_unc["2018"][0])})
+        
+        dcm_cat_year.addSystematic(name="lumi_unc_{}_{}".format(cat, year), kind = "lnN", values={"signal":"{}".format(1+lumi_unc["Run-2"][0])})
+
         dcm_cat_year.addSystematic(name="PDF_alphas_unc_{}_{}".format(cat, year), kind = "lnN", values={"signal":"{}".format(1+PDF_alphas_unc)})
         dcm_cat_year.addSystematic(name=f"bkg_rate_{cat}_{year}", kind = "rateParam", values=[f"{physics}_{finalstate}_{cat}_{year}", "background", "1", "[0,10]"])
 
@@ -137,7 +140,7 @@ def main(paths, isMC, trees, var, categories, period, bins, finalstate="4g", phy
         print("datacard successfully made for {}".format(dcm_cat_year.tag))
         print("-------------------------------------------------")
 
-#        cleanup(year, finalstate, physics, cat)
+        cleanup(year, finalstate, physics, cat)
 
         i+=1
 

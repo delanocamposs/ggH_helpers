@@ -32,9 +32,9 @@ class CMSstyle:
             i+=1
 
 
-        self.tex.DrawLatex(0.4, 0.85, "LH")
-        self.tex.DrawLatex(0.39, 0.47, "LL")
-        self.tex.DrawLatex(0.65, 0.47, "HL")
-        self.tex.DrawLatex(0.65, 0.85, "HH")
+        #self.tex.DrawLatex(0.4, 0.85, "LH")
+        #self.tex.DrawLatex(0.39, 0.47, "LL")
+        #self.tex.DrawLatex(0.73, 0.47, "HL")
+        #self.tex.DrawLatex(0.73, 0.85, "HH")
 
         self.c.Update()
