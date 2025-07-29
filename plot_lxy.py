@@ -15,11 +15,11 @@ l=ROOT.TLegend(0.5+right-left,0.67+up-down, 0.95+right-left, 0.8+up-down)
 temps=[]
 xmax=150
 ymax=150
-xmin=-200
-ymin=-200
+xmin=-20
+ymin=-20
 nbins=int((xmax-xmin)/2)
 
-thres=80
+thres=50
 
 signal="ggH_M30_ctau0_ggH4g.root"
 sig_tree="ggH4g"
@@ -45,13 +45,7 @@ weight_formula=f"(genWeight / {sumw})*{xsec}*{BR}*Pileup_weight"
 df=df.Filter("HLT_passed==1 && best_4g_ID_m30==1 && best_4g_corr_mass_m30>110 && best_4g_corr_mass_m30<140 && best_4g_phi1_dxy_m30>-20 && best_4g_phi2_dxy_m30>-20").Define("event_weight", weight_formula)
 histo=df.Histo2D(("", "", nbins, xmin, xmax, nbins, ymin, ymax), "best_4g_phi1_dxy_m30", "best_4g_phi2_dxy_m30", "event_weight")
 
-
-#histo.Fill(ev.best_4g_phi1_dxy_m30, ev.best_4g_phi2_dxy_m30, (ev.genWeight/sumw)*(xsec)*(BR)*(ev.Pileup_weight))
-print("+++++++++++++++++++++++++++")
-#print("lxy1: ", ev.best_4g_phi1_dxy_m30)
-#print("lxy2: ", ev.best_4g_phi2_dxy_m30)
-#print("+++++++++++++++++++++++++++")
-
+#histo.Scale(0.051249577845322525*(101310/59830))
 histo.Scale(lumi)
 print(histo.Integral())
 histo.GetXaxis().SetTitle("#phi_{1} L_{xy} (cm)        ")
@@ -63,34 +57,34 @@ c.Update()
 ROOT.gStyle.SetPalette(103)
 c.cd()
 histo.Draw("COLZ")
-hline=ROOT.TLine(-20, -20, -20, ymax)
-hline.SetLineColor(ROOT.kRed-3)
-hline.SetLineWidth(3)
-hline.Draw("SAME")
+#hline=ROOT.TLine(-20, -20, -20, ymax)
+#hline.SetLineColor(ROOT.kRed-3)
+#hline.SetLineWidth(3)
+#hline.Draw("SAME")
 
-vline=ROOT.TLine(xmax, -20, -20, -20)
-vline.SetLineColor(ROOT.kRed-3)
-vline.SetLineWidth(3)
-vline.Draw("SAME")
+#vline=ROOT.TLine(xmax, -20, -20, -20)
+#vline.SetLineColor(ROOT.kRed-3)
+#vline.SetLineWidth(3)
+#vline.Draw("SAME")
 
 
-hline2=ROOT.TLine(-20, thres, xmax, thres)
-vline2=ROOT.TLine(thres, -20, thres, ymax)
-hline2.SetLineColor(ROOT.kOrange-2)
-vline2.SetLineColor(ROOT.kOrange-2)
-hline2.SetLineWidth(2)
-vline2.SetLineWidth(2)
-hline2.Draw("SAME")
-vline2.Draw("SAME")
+#hline2=ROOT.TLine(-20, thres, xmax, thres)
+#vline2=ROOT.TLine(thres, -20, thres, ymax)
+#hline2.SetLineColor(ROOT.kOrange-2)
+#vline2.SetLineColor(ROOT.kOrange-2)
+#hline2.SetLineWidth(2)
+#vline2.SetLineWidth(2)
+#hline2.Draw("SAME")
+#vline2.Draw("SAME")
 
-box1=ROOT.TBox(xmin, ymin, -20, ymax)
-box2=ROOT.TBox(-20, ymin, xmax, -20)
-box1.SetFillColor(ROOT.kRed-7)
-box2.SetFillColor(ROOT.kRed-7)
-box1.SetFillStyle(3004)
-box2.SetFillStyle(3004)
-box1.Draw("SAME")
-box2.Draw("SAME")
+#box1=ROOT.TBox(xmin, ymin, -20, ymax)
+#box2=ROOT.TBox(-20, ymin, xmax, -20)
+#box1.SetFillColor(ROOT.kRed-7)
+#box2.SetFillColor(ROOT.kRed-7)
+#box1.SetFillStyle(3004)
+#box2.SetFillStyle(3004)
+#box1.Draw("SAME")
+#box2.Draw("SAME")
 
 c.SetLeftMargin(0.08)
 c.SetRightMargin(0.2)

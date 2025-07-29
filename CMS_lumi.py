@@ -21,7 +21,7 @@ cmsTextOffset    = 0.0
 
 relPosX    = 0.0
 relPosY    = 0.035
-relExtraDY = 1.2
+relExtraDY = 0.5
 
 extraOverCmsTextSize  = 0.76
 
@@ -100,7 +100,7 @@ def CMS_lumi(pad,  iPeriod,  iPosX, relPosX = relPosX, relPosY = relPosY, relExt
     latex.SetTextAlign(31) 
     latex.SetTextSize(lumiTextSize*t)    
 
-    latex.DrawLatex(1-r,1-t+lumiTextOffset*t,lumiText)
+    latex.DrawLatex(1-r-0.085,1-t+lumiTextOffset*t,lumiText)
 
     if( outOfFrame ):
         latex.SetTextFont(cmsTextFont)
