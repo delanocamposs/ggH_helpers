@@ -85,14 +85,17 @@ def addDCB(self, name, variable, jsonFile, scale={}, resolution={}):
 
 
 #this function adds a bernstein polynomial of degree 3 to the Rooworkspace for the ggH shape analysis
-def addBernstein(self, name, variable, jsonFile):
+def addBernstein(self, name, variable, jsonFile, order):
 #    self.w.factory(f"{variable}[100,200]")
 
     with open(jsonFile) as f:
         params = json.load(f)    
 
-    coeffNames = ["c_0_bkg", "c_1_bkg", "c_2_bkg"]
-    keys = ["c_0", "c_1", "c_2"]    
+    coeffNames=[]
+    keys = []    
+    for i in range(order):
+        coeffNames.append(f"c_{i}_bkg")
+        keys.append(f"c_{i}")    
 
     clist=ROOT.RooArgList()
     for coeffName, key in zip(coeffNames, keys):
@@ -101,7 +104,7 @@ def addBernstein(self, name, variable, jsonFile):
         clist.add(self.w.var(coeffName))
     
     pdfName = "_".join([name, self.tag])
-    bernstein_pdf = ROOT.RooBernsteinFast(3)(pdfName,pdfName,self.w.var(variable),clist)
+    bernstein_pdf = ROOT.RooBernsteinFast(order)(pdfName,pdfName,self.w.var(variable),clist)
     self.w.Import(bernstein_pdf)
     #getattr(self.w, 'import')(bernstein_pdf)
 

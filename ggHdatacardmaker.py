@@ -13,9 +13,11 @@ import glob
 
 def cleanup(year, finalstate, physics, cat):
     subprocess.run(["mkdir", f"{cat}_{year}_{finalstate}_{physics}"])
-    subprocess.run(["mv", f"fit_bkg_{cat}_{year}.root", f"{cat}_{year}_{finalstate}_{physics}/"])
+    subprocess.run(["mv", f"fit_bkg_{cat}_{year}_fit.root", f"{cat}_{year}_{finalstate}_{physics}/"])
+    subprocess.run(["mv", f"fit_bkg_{cat}_{year}_gen.root", f"{cat}_{year}_{finalstate}_{physics}/"])
     subprocess.run(["mv", f"fit_sig_{cat}_{year}.root", f"{cat}_{year}_{finalstate}_{physics}/"])
-    subprocess.run(["mv", f"bkg_parameters_{cat}_{year}.json", f"{cat}_{year}_{finalstate}_{physics}/"])
+    subprocess.run(["mv", f"bkg_parameters_{cat}_{year}_fit.json", f"{cat}_{year}_{finalstate}_{physics}/"])
+    subprocess.run(["mv", f"bkg_parameters_{cat}_{year}_gen.json", f"{cat}_{year}_{finalstate}_{physics}/"])
     subprocess.run(["mv", f"sig_parameters_{cat}_{year}.json", f"{cat}_{year}_{finalstate}_{physics}/"])
     subprocess.run(["mv", f"data_obs_{cat}_{year}.root", f"{cat}_{year}_{finalstate}_{physics}/"])
 #    subprocess.run(["mv", f"datacardInputs_{physics}_{finalstate}_{cat}_{year}.root", f"{cat}_{year}_{finalstate}_{physics}/"])
@@ -24,7 +26,7 @@ def cleanup(year, finalstate, physics, cat):
     
 
 
-def main(paths, isMC, trees, var, categories, period, bins, finalstate="4g", physics="ggH", bkg_weight=True,order=3, lxy1=50, lxy2=50):
+def main(paths, isMC, trees, var, categories, period, bins, finalstate="4g", physics="ggH", bkg_weight=True,order_fit=3, order_gen=3,lxy1=50, lxy2=50, lumi_scaling=1):
     ROOT.gROOT.SetBatch(True)
     year=period
     cat_sum=0
@@ -48,12 +50,6 @@ def main(paths, isMC, trees, var, categories, period, bins, finalstate="4g", phy
                     "lowhigh" : {"cut" : f"(best_4g_phi1_dxy_m30<{lxy1})&&(best_4g_phi2_dxy_m30>{lxy2})", "file" : ""}, 
                     "lowlow" : {"cut" : f"(best_4g_phi1_dxy_m30<{lxy1})&&(best_4g_phi2_dxy_m30<{lxy2})", "file" : ""}, 
                     "none" : {"cut" : "(HLT_passed == 1)", "file" : ""}}
-
-#    cat_dict = {"highhigh" : {"cut" : f"(best_4g_phi1_dxy_m30>{lxy1})&&(best_4g_phi2_dxy_m30>{lxy2}) &&HLT_passed==1&&best_4g_ID_m30==1&&best_4g_phi1_mass_m30>14&&best_4g_phi2_mass_m30>14 ", "file" : ""},
-#                    "highlow" : {"cut" : f"(best_4g_phi1_dxy_m30>{lxy1})&&(best_4g_phi2_dxy_m30<{lxy2}) &&HLT_passed==1&&best_4g_ID_m30==1&&best_4g_phi1_mass_m30>14&&best_4g_phi2_mass_m30>14 ", "file" : ""}, 
-#                    "lowhigh" : {"cut" : f"(best_4g_phi1_dxy_m30<{lxy1})&&(best_4g_phi2_dxy_m30>{lxy2}) &&HLT_passed==1&&best_4g_ID_m30==1&&best_4g_phi1_mass_m30>14&&best_4g_phi2_mass_m30>14 ", "file" : ""}, 
-#                    "lowlow" : {"cut" : f"(best_4g_phi1_dxy_m30<{lxy1})&&(best_4g_phi2_dxy_m30<{lxy2}) &&HLT_passed==1&&best_4g_ID_m30==1&&best_4g_phi1_mass_m30>14&&best_4g_phi2_mass_m30>14 ", "file" : ""}, 
-#                    "none" : {"cut" : "(HLT_passed == 1)", "file" : ""}}
 
 
     output_names = ["rate_histos_{}_{}.root".format(cat, year) for cat in categories]
@@ -97,40 +93,42 @@ def main(paths, isMC, trees, var, categories, period, bins, finalstate="4g", phy
 
     selections.reverse()
     print(selections)
-
-    th1d_files, th1d_filenames, th1d_histos, th1d_histo_obj = ggHtools.sig_bkg_histos(paths, isMC, trees, selections, var, output_names, bins, year, histo_names, bkg_weight)
+    
+    th1d_files, th1d_filenames, th1d_histos, th1d_histo_obj = ggHtools.sig_bkg_histos(paths, isMC, trees, selections, var, output_names, bins, year, histo_names, bkg_weight, lumi_scaling=lumi_scaling)
 
     i=0
     for cat in categories:
         bkg_rate=th1d_histo_obj[i][1].Integral()
         dcm_cat_year = DataCardMaker(finalstate, cat, period, lumis["Run-2"][0], physics)
 
-        ggHfitter.fitBKG("{}".format(th1d_filenames[i]), "{}".format(th1d_histos[i][1]), "fit_bkg_{}_{}.root".format(cat, year), order=order)
-        ggHtools.extract_JSON("fit_bkg_{}_{}.root".format(cat, year), "w", "bkg_parameters_{}_{}.json".format(cat, year))
-        
-        ggHfitter.fitSIG("{}".format(th1d_filenames[i]), "{}".format(th1d_histos[i][0]), "fit_sig_{}_{}.root".format(cat, year))
-        ggHtools.extract_JSON("fit_sig_{}_{}.root".format(cat, year), "w", "sig_parameters_{}_{}.json".format(cat, year))
-        dcm_cat_year.addFixedYieldFromFile(name="signal", ID=0, filename=th1d_filenames[i], histoName=th1d_histos[i][0], lumi=True)
-        print(f"signal yield for {cat} using file {th1d_filenames[i]} with histogram {th1d_histos[i][0]}")
+        #we need to fit bkg twice because one fit is used to generate the data and one fit is used for combine fit
+        #two jsons with parameters: fit and gen. gen=used to generate data. fit=used in combine.
+        ggHfitter.fitBKG(f"{th1d_filenames[i]}", f"{th1d_histos[i][1]}", f"fit_bkg_{cat}_{year}_fit.root", order=order_fit)
+        ggHtools.extract_JSON(f"fit_bkg_{cat}_{year}_fit.root", "w", f"bkg_parameters_{cat}_{year}_fit.json")
 
-        ggHcardhelper.addDCB(dcm_cat_year, "signal", "mass", "sig_parameters_{}_{}.json".format(cat, year), resolution={"nuisance_smear_{}_{}".format(cat, year):"0.264"})
-        ggHcardhelper.addBernstein(dcm_cat_year, "background", "mass", "bkg_parameters_{}_{}.json".format(cat, year))
+        ggHfitter.fitBKG(f"{th1d_filenames[i]}", f"{th1d_histos[i][1]}", f"fit_bkg_{cat}_{year}_gen.root", order=order_gen)
+        ggHtools.extract_JSON(f"fit_bkg_{cat}_{year}_gen.root", "w", f"bkg_parameters_{cat}_{year}_gen.json")
 
-        dcm_cat_year.addSystematic(name="nuisance_smear_{}_{}".format(cat, year), kind = "param", values=[0.0, 1.0])
+        ggHfitter.fitSIG(f"{th1d_filenames[i]}", f"{th1d_histos[i][0]}", f"fit_sig_{cat}_{year}.root")
+        ggHtools.extract_JSON(f"fit_sig_{cat}_{year}.root", "w", f"sig_parameters_{cat}_{year}.json")
 
-        dcm_cat_year.addSystematic(name="xsec_unc_{}_{}".format(cat, year), kind = "lnN", values={"signal":"{}/{}".format(1+xsec_quad_up,1-xsec_quad_down)})
-        
-        dcm_cat_year.addSystematic(name="lumi_unc_{}_{}".format(cat, year), kind = "lnN", values={"signal":"{}".format(1+lumi_unc["Run-2"][0])})
+        ggHcardhelper.addDCB(dcm_cat_year, "signal", "mass", f"sig_parameters_{cat}_{year}.json", resolution={f"nuisance_smear_{cat}_{year}":"0.264"})
 
-        dcm_cat_year.addSystematic(name="PDF_alphas_unc_{}_{}".format(cat, year), kind = "lnN", values={"signal":"{}".format(1+PDF_alphas_unc)})
+        #the bernstein used in the combine workspace, hence the order=order_fit
+        ggHcardhelper.addBernstein(dcm_cat_year, "background", "mass", f"bkg_parameters_{cat}_{year}_fit.json", order=order_fit)
+
+        dcm_cat_year.addSystematic(name=f"nuisance_smear_{cat}_{year}", kind = "param", values=[0.0, 1.0])
+        dcm_cat_year.addSystematic(name=f"xsec_unc_{cat}_{year}", kind = "lnN", values={"signal":f"{1+xsec_quad_up}/{1-xsec_quad_down}"})
+        dcm_cat_year.addSystematic(name=f"lumi_unc_{cat}_{year}", kind = "lnN", values={"signal":"{}".format(1+lumi_unc["Run-2"][0])})
+        dcm_cat_year.addSystematic(name=f"PDF_alphas_unc_{cat}_{year}", kind = "lnN", values={"signal":"{}".format(1+PDF_alphas_unc)})
         dcm_cat_year.addSystematic(name=f"bkg_rate_{cat}_{year}", kind = "rateParam", values=[f"{physics}_{finalstate}_{cat}_{year}", "background", "1", "[0,10]"])
 
         dcm_cat_year.addFixedYieldFromFile(name="background", ID=1, filename=th1d_filenames[i], histoName=th1d_histos[i][1], lumi=False)
+        dcm_cat_year.addFixedYieldFromFile(name="signal", ID=0, filename=th1d_filenames[i], histoName=th1d_histos[i][0], lumi=True)
 
         workspace_file_cat_year = "datacardInputs_"+dcm_cat_year.tag+".root"
 
-        data_cat_year_name = ggHtools.generate_data_hist("fit_bkg_{}_{}.root".format(cat, year), bins_num=bins[0], norm=th1d_histo_obj[i][1].Integral(), output_name="data_obs_{}_{}.root".format(cat, year))
-        print(th1d_histo_obj[i][1])
+        data_cat_year_name = ggHtools.generate_data_hist("fit_bkg_{}_{}_gen.root".format(cat, year), bins_num=bins[0], norm=th1d_histo_obj[i][1].Integral(), output_name="data_obs_{}_{}.root".format(cat, year))
 
         dcm_cat_year.importBinnedData(data_cat_year_name, "h_pdf__mass", ["mass"])
             
@@ -162,7 +160,7 @@ if __name__=="__main__":
             categories.append(argu)
     print(categories)
 
-    main(paths=["ggH_M30_ctau0_ggH4g.root", "EGamma_2018_all_ggH4g.root"], isMC=[1,0], trees=["ggH4g","ggH4g"], var="best_4g_corr_mass_m30", categories=categories,period=args.year, bins=[90, 110, 140], order=3, lxy1=50, lxy2=50)
+    main(paths=["ggH_M30_ctau0_ggH4g.root", "EGamma_2018_all_ggH4g.root"], isMC=[1,0], trees=["ggH4g","ggH4g"], var="best_4g_corr_mass_m30", categories=categories,period=args.year, bins=[90, 110, 140], order_fit=3, order_gen=3, lxy1=50, lxy2=50, lumi_scaling=10)
 
 
         
