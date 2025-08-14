@@ -165,7 +165,7 @@ if __name__=="__main__":
             categories.append(argu)
     print(categories)
 
-    main(paths=["ggH_M30_ctau0_ggH4g.root", "EGamma_2018_all_ggH4g.root"], isMC=[1,0], trees=["ggH4g","ggH4g"], var="best_4g_corr_mass_m30", categories=categories,period=args.year, bins=[60, 110, 140], order_fit=3, order_gen=3, lxy1=50, lxy2=50, lumi_scaling=1)
+    main(paths=["ggH_M30_ctau0_ggH4g.root", "EGamma_2018_all_ggH4g.root"], isMC=[1,0], trees=["ggH4g","ggH4g"], var="best_4g_corr_mass_m30", categories=categories,period=args.year, bins=[60, 110, 140])
 
 
         

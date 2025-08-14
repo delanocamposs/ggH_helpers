@@ -38,7 +38,7 @@ def sig_bkg_histos(files, isMC, trees, selections, var, output_names, bins, year
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     #this is for the purposes of testing the effects of various triggers (pT cuts on leading/subleading photons) on the limit
     #im simulating 33GeV double photon trigger here
-    double_photon=False
+    double_photon=True
     PT_MIN=33
     ROOT.gInterpreter.Declare(f"""
     bool passPtCut(float a,float b,float c,float d) {{
@@ -118,7 +118,14 @@ def sig_bkg_histos(files, isMC, trees, selections, var, output_names, bins, year
     #these dictionary values are scales for the background distribution according to what year is being processed. 
     #this needs to be done since hte 0.05124.... factor was derived from comparing sidebands of 2018 preselected vs ID data. 
     #if we want to interpolate to any other year having derived the initial scale factor from 2018, all years need their own additional weight normalized by 2018 lumi
-    bkg_factor={"2016":[36310/59830], "2017":[41480/59830], "2018":[1], "Run-2":[137620/59830], "Run-3":[170857/59830]}
+    bkg_factor={"2016":[36310/59830], 
+                "2017":[41480/59830], 
+                "2018":[1], 
+                "Run-2":[137620/59830], 
+                "2022":[34748/59830], 
+                "2023":[27245/59830], 
+                "2024":[108920/59830], 
+                "Run-3":[170857/59830]}
 
     for j in range(len(selections)):
         selection_j = selections[j]
@@ -268,28 +275,3 @@ def generate_bkg_toy(file, bins_num, norm, output_name, toys=1):
     return output_name
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-#if __name__=="__main__":
-#    gen_data(bkg_file="EGamma_2018_all_1bad.root", tree="ggH4g_1bad", var="best_4g_corr_mass_m30", cut="(HLT_passed == 1)&&(best_4g_ID_m30 == 1)&&(best_4g_phi1_mass_m30 > 14)&&(best_4g_phi2_mass_m30>14)&&(best_4g_phi1_dxy_m30>-20)&&(best_4g_phi2_dxy_m30>-20)", output_names=[], categories=["lowlow"])
-#    gen_data(bkg_file="EGamma_2018_all_1bad.root", tree="ggH4g_1bad", var="best_4g_corr_mass_m30", cut="(HLT_passed == 1)&&(best_4g_ID_m30 == 1)&&(best_4g_phi1_mass_m30 > 14)&&(best_4g_phi2_mass_m30>14)", output_names=[], categories=["lowlow"])
