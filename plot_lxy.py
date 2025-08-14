@@ -37,19 +37,22 @@ sumw=0.0
 for r in runs:
     sumw+=getattr(r, "genEventSumw")
 BR=1e-4
-lumi=101310
+lumi=59830
 xsec=52.143
+#df=ROOT.RDataFrame(bkg_tree, bkg)
 df=ROOT.RDataFrame(sig_tree, signal)
 weight_formula=f"(genWeight / {sumw})*{xsec}*{BR}*Pileup_weight"
 #df=df.Filter("HLT_passed==1 && Photon_preselection[best_4g_idx1_m30]==1 && Photon_preselection[best_4g_idx2_m30]==1 && Photon_preselection[best_4g_idx3_m30]==1 && Photon_preselection[best_4g_idx4_m30]==1 && best_4g_corr_mass_m30>110 && best_4g_corr_mass_m30<140 && best_4g_phi1_dxy_m30>-20 && best_4g_phi2_dxy_m30>-20")
 df=df.Filter("HLT_passed==1 && best_4g_ID_m30==1 && best_4g_corr_mass_m30>110 && best_4g_corr_mass_m30<140 && best_4g_phi1_dxy_m30>-20 && best_4g_phi2_dxy_m30>-20").Define("event_weight", weight_formula)
 histo=df.Histo2D(("", "", nbins, xmin, xmax, nbins, ymin, ymax), "best_4g_phi1_dxy_m30", "best_4g_phi2_dxy_m30", "event_weight")
+#histo=df.Histo2D(("", "", nbins, xmin, xmax, nbins, ymin, ymax), "best_4g_phi1_dxy_m30", "best_4g_phi2_dxy_m30")
 
-#histo.Scale(0.051249577845322525*(101310/59830))
+#histo.Scale(0.051249577845322525)
 histo.Scale(lumi)
 print(histo.Integral())
 histo.GetXaxis().SetTitle("#phi_{1} L_{xy} (cm)        ")
-histo.GetYaxis().SetTitle("   #phi_{2} L_{xy} (cm)")
+histo.GetYaxis().SetTitle("#phi_{2} L_{xy} (cm)        ")
+#histo.GetYaxis().SetTitle("   #phi_{2} L_{xy} (cm)")
 histo.GetZaxis().SetTitle("Events")
 
 
@@ -68,14 +71,14 @@ histo.Draw("COLZ")
 #vline.Draw("SAME")
 
 
-#hline2=ROOT.TLine(-20, thres, xmax, thres)
-#vline2=ROOT.TLine(thres, -20, thres, ymax)
-#hline2.SetLineColor(ROOT.kOrange-2)
-#vline2.SetLineColor(ROOT.kOrange-2)
-#hline2.SetLineWidth(2)
-#vline2.SetLineWidth(2)
-#hline2.Draw("SAME")
-#vline2.Draw("SAME")
+hline2=ROOT.TLine(-20, thres, xmax, thres)
+vline2=ROOT.TLine(thres, -20, thres, ymax)
+hline2.SetLineColor(ROOT.kRed-7)
+vline2.SetLineColor(ROOT.kRed-7)
+hline2.SetLineWidth(3)
+vline2.SetLineWidth(3)
+hline2.Draw("SAME")
+vline2.Draw("SAME")
 
 #box1=ROOT.TBox(xmin, ymin, -20, ymax)
 #box2=ROOT.TBox(-20, ymin, xmax, -20)
@@ -98,7 +101,7 @@ histo.SetStats(0)
 histo.GetZaxis().SetTitleSize(0.05)
 histo.GetYaxis().SetTitleSize(0.04)
 histo.GetXaxis().SetTitleSize(0.05)
-histo.GetZaxis().SetTitleOffset(1.1)
+histo.GetZaxis().SetTitleOffset(1.3)
 histo.GetYaxis().SetTitleOffset(1.1)
 histo.GetXaxis().SetTitleOffset(1.1)
 c.Update()

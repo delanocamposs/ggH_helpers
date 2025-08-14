@@ -23,7 +23,7 @@ poly.GetYaxis().SetTitleSize(0.01)
 polyy.SetParameters(0.358583457)
 
 c.Update()
-e1 = leg.AddEntry("poly", "ggH", "l")
+e1 = leg.AddEntry("poly", "This work (ggH)", "l")
 e2=leg.AddEntry("polyy", "VH", "l")
 e1.SetLineWidth(3)
 e1.SetLineColor(ROOT.kAzure+5)
