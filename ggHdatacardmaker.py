@@ -75,10 +75,14 @@ def main(paths, isMC, trees, var, categories, period, bins, finalstate="4g", phy
                     "VBF":[0.021, 0.021]}
 
     #lumi unc obtained from: https://twiki.cern.ch/twiki/bin/view/CMS/LumiRecommendationsRun2
+    #not sure about 2022, 2023, 2024, Run-3
     lumi_unc={"2016":[0.012],
               "2017":[0.023],
               "2018":[0.025], 
               "Run-2": [0.016], 
+              "2022":[0.012],
+              "2023":[0.023],
+              "2024":[0.025],
               "Run-3":[0.02]} 
 
     xsec_quad_up = np.sqrt((xsec_unc["ggH"][0])**2+(xsec_unc["VBF"][0])**2)
@@ -108,10 +112,10 @@ def main(paths, isMC, trees, var, categories, period, bins, finalstate="4g", phy
 
         #we need to fit bkg twice because one fit is used to generate the data and one fit is used for combine fit
         #two jsons with parameters: fit and gen. gen=used to generate data. fit=used in combine.
-        ggHfitter.fitBKG(f"{th1d_filenames[i]}", f"{th1d_histos[i][1]}", f"fit_bkg_{cat}_{year}_fit.root", order=order_fit)
+        ggHfitter.fitBKG(f"{th1d_filenames[i]}", f"{th1d_histos[i][1]}", f"fit_bkg_{cat}_{year}_fit.root")
         ggHtools.extract_JSON(f"fit_bkg_{cat}_{year}_fit.root", "w", f"bkg_parameters_{cat}_{year}_fit.json")
 
-        ggHfitter.fitBKG(f"{th1d_filenames[i]}", f"{th1d_histos[i][1]}", f"fit_bkg_{cat}_{year}_gen.root", order=order_gen)
+        ggHfitter.fitBKG(f"{th1d_filenames[i]}", f"{th1d_histos[i][1]}", f"fit_bkg_{cat}_{year}_gen.root")
         ggHtools.extract_JSON(f"fit_bkg_{cat}_{year}_gen.root", "w", f"bkg_parameters_{cat}_{year}_gen.json")
 
         ggHfitter.fitSIG(f"{th1d_filenames[i]}", f"{th1d_histos[i][0]}", f"fit_sig_{cat}_{year}.root")
@@ -120,7 +124,7 @@ def main(paths, isMC, trees, var, categories, period, bins, finalstate="4g", phy
         ggHcardhelper.addDCB(dcm_cat_year, "signal", "mass", f"sig_parameters_{cat}_{year}.json", resolution={f"nuisance_smear_{cat}_{year}":"0.264"})
 
         #the bernstein used in the combine workspace, hence the order=order_fit
-        ggHcardhelper.addBernstein(dcm_cat_year, "background", "mass", f"bkg_parameters_{cat}_{year}_fit.json", order=order_fit)
+        ggHcardhelper.addBernstein(dcm_cat_year, "background", "mass", f"bkg_parameters_{cat}_{year}_fit.json")
 
         dcm_cat_year.addSystematic(name=f"nuisance_smear_{cat}_{year}", kind = "param", values=[0.0, 1.0])
         dcm_cat_year.addSystematic(name=f"xsec_unc_{cat}_{year}", kind = "lnN", values={"signal":f"{1+xsec_quad_up}/{1-xsec_quad_down}"})
