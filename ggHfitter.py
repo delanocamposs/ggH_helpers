@@ -1,4 +1,6 @@
 from Fitter import *
+ROOT.gROOT.SetBatch(False)
+
 
 def fitBKG(file, hist, output_name, order=3, POI="mass", verbose=False):
     f = ROOT.TFile(file)

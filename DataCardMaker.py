@@ -4,15 +4,17 @@ import json
 
 
 class DataCardMaker:
-    def __init__(self,finalstate,category,period,luminosity=1.0,physics="LJ"):
+    def __init__(self,finalstate,category,period,lifetime,mass,luminosity=1.0,physics="ggH"):
         self.physics=physics
+        self.lifetime=lifetime
+        self.mass=mass
         self.finalstate=finalstate
         self.category=category
         self.period=period
         self.contributions=[]
         self.systematics=[]
 
-        self.tag=self.physics+"_"+finalstate+"_"+category+"_"+period
+        self.tag=self.physics+"_"+self.finalstate+"_ct"+self.lifetime+"_m"+self.mass+"_"+self.category+"_"+self.period
         self.rootFile = ROOT.TFile("datacardInputs_"+self.tag+".root","RECREATE")
         self.rootFile.cd()
         self.w=ROOT.RooWorkspace("w","w")

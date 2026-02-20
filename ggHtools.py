@@ -12,6 +12,7 @@ from scipy.special import comb
 from scipy.integrate import simps
 from scipy.stats import beta
 from ggHfitter import fitBKG
+ROOT.gROOT.SetBatch(False)
 
 def define_weightMC(file, tree, BR, xsec):
     '''returns a dataframe that has the event weight defined by the BR, xsec, genWeight, PU weight and sumw'''

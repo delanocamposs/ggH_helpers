@@ -1,9 +1,7 @@
 import ROOT
 import json
 from DataCardMaker import DataCardMaker
-
-
-
+ROOT.gROOT.SetBatch(False)
 
 #this function adds a double crystal ball to the RooWorkspace for the ggH shape analysis
 def addDCB(self, name, variable, jsonFile, scale={}, resolution={}):
