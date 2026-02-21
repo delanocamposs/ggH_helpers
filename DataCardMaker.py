@@ -39,11 +39,11 @@ class DataCardMaker:
 
         scaleSysts=[]
         resolutionSysts=[]
-        for syst,factor in scale.iteritems():
+        for syst,factor in scale.items():
             self.w.factory(syst+"[0,-0.1,0.1]")
             scaleStr=scaleStr+"+{factor}*{syst}".format(factor=factor,syst=syst)
             scaleSysts.append(syst)
-        for syst,factor in resolution.iteritems():
+        for syst,factor in resolution.items():
             self.w.factory(syst+"[0,-0.5,0.5]")
             resolutionStr=resolutionStr+"+{factor}*{syst}".format(factor=factor,syst=syst)
             resolutionSysts.append(syst)
@@ -91,11 +91,11 @@ class DataCardMaker:
 
         scaleSysts=[]
         resolutionSysts=[]
-        for syst,factor in scale.iteritems():
+        for syst,factor in scale.items():
             self.w.factory(syst+"[0,-0.1,0.1]")
             scaleStr=scaleStr+"+{factor}*{syst}".format(factor=factor,syst=syst)
             scaleSysts.append(syst)
-        for syst,factor in resolution.iteritems():
+        for syst,factor in resolution.items():
             self.w.factory(syst+"[0,-0.5,0.5]")
             resolutionStr=resolutionStr+"+{factor}*{syst}".format(factor=factor,syst=syst)
             resolutionSysts.append(syst)
@@ -150,11 +150,11 @@ class DataCardMaker:
 
         scaleSysts=[]
         resolutionSysts=[]
-        for syst,factor in scale.iteritems():
+        for syst,factor in scale.items():
             self.w.factory(syst+"[0,-0.1,0.1]")
             scaleStr=scaleStr+"+{factor}*{syst}".format(factor=factor,syst=syst)
             scaleSysts.append(syst)
-        for syst,factor in resolution.iteritems():
+        for syst,factor in resolution.items():
             self.w.factory(syst+"[0,-0.5,0.5]")
             resolutionStr=resolutionStr+"+{factor}*{syst}".format(factor=factor,syst=syst)
             resolutionSysts.append(syst)
@@ -205,11 +205,11 @@ class DataCardMaker:
 
         scaleSysts=[]
         resolutionSysts=[]
-        for syst,factor in scale.iteritems():
+        for syst,factor in scale.items():
             self.w.factory(syst+"[0,-0.1,0.1]")
             scaleStr=scaleStr+"+{factor}*{syst}".format(factor=factor,syst=syst)
             scaleSysts.append(syst)
-        for syst,factor in resolution.iteritems():
+        for syst,factor in resolution.items():
             self.w.factory(syst+"[0,-0.5,0.5]")
             resolutionStr=resolutionStr+"+{factor}*{syst}".format(factor=factor,syst=syst)
             resolutionSysts.append(syst)
@@ -398,7 +398,7 @@ class DataCardMaker:
           param="("+info['quarkFraction'].replace("MVV",observables[0])+")*(1.0"
 
           systNames=[]
-          for syst,factor in fractionSysts.iteritems():
+          for syst,factor in fractionSysts.items():
               systNames.append(syst)
               self.w.factory(syst+"[0,-1,1]")
               param=param+"+{factor}*{syst}".format(factor=factor,syst=syst)
@@ -429,15 +429,15 @@ class DataCardMaker:
         p1SystStr='0'
         p2SystStr='0'
 
-        for syst,factor in systP0.iteritems():
+        for syst,factor in systP0.items():
             self.w.factory(syst+"[0,-0.5,0.5]")
             p0SystStr+="+{factor}*{syst}".format(factor=factor,syst=syst)
             p0Systs.append(syst)
-        for syst,factor in systP1.iteritems():
+        for syst,factor in systP1.items():
             self.w.factory(syst+"[0,-0.5,0.5]")
             p1SystStr+="+{factor}*{syst}".format(factor=factor,syst=syst)
             p1Systs.append(syst)
-        for syst,factor in systP2.iteritems():
+        for syst,factor in systP2.items():
             self.w.factory(syst+"[0,-0.5,0.5]")
             p2SystStr+="+{factor}*{syst}".format(factor=factor,syst=syst)
             p2Systs.append(syst)
@@ -473,7 +473,7 @@ class DataCardMaker:
 
         p0Systs=[]
         p0SystStr='0'
-        for syst,factor in systP0.iteritems():
+        for syst,factor in systP0.items():
             self.w.factory(syst+"[0,-0.5,0.5]")
             p0SystStr+="+{factor}*{syst}".format(factor=factor,syst=syst)
             p0Systs.append(syst)
@@ -688,17 +688,17 @@ class DataCardMaker:
         systsV1=[]
         systsV2=[]
 
-        for syst,factor in systs0.iteritems():
+        for syst,factor in systs0.items():
             self.w.factory(syst+"[0,-0.1,0.1]")
             syst0Str+="+{factor}*{syst}".format(factor=factor,syst=syst)
             systsV0.append(syst)
 
-        for syst,factor in systs1.iteritems():
+        for syst,factor in systs1.items():
             self.w.factory(syst+"[0,-0.1,0.1]")
             syst1Str+="+{factor}*{syst}".format(factor=factor,syst=syst)
             systsV1.append(syst)
 
-        for syst,factor in systs2.iteritems():
+        for syst,factor in systs2.items():
             self.w.factory(syst+"[0,-0.1,0.1]")
             syst2Str+="+{factor}*{syst}".format(factor=factor,syst=syst)
             systsV2.append(syst)
@@ -737,7 +737,7 @@ class DataCardMaker:
     def addParametricMVVBKGShapePow(self,name,MVV,MJJ,jsonFile,newTag="",systs0={}):
         syst0Str='0'
         systsV0=[]
-        for syst,factor in systs0.iteritems():
+        for syst,factor in systs0.items():
             self.w.factory(syst+"[0,-0.1,0.1]")
             syst0Str+="+{factor}*{syst}".format(factor=factor,syst=syst)
             systsV0.append(syst)
