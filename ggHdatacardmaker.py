@@ -103,7 +103,7 @@ def main(paths, isMC, trees, var, categories, period, bins, lifetime, mass, fina
     selections.reverse()
     #print(selections)
     
-    th1d_files, th1d_filenames, th1d_histos, th1d_histo_obj = ggHtools.sig_bkg_histos(paths, isMC, trees, selections, var, output_names, bins, year, histo_names, bkg_weight, lumi_scaling=lumi_scaling)
+    th1d_files, th1d_filenames, th1d_histos, th1d_histo_obj = ggHtools.sig_bkg_histos(paths, isMC, trees,mass,lifetime, selections, var, output_names, bins, year, histo_names, bkg_weight, lumi_scaling=lumi_scaling)
 
     i=0
     for cat in categories:
