@@ -33,7 +33,7 @@ def define_weightMC(file, tree, BR, xsec):
 
 
 
-def sig_bkg_histos(files, isMC, trees, selections, var, output_names, bins, year, histo_names=[], bkg_weight=True, lumi_scaling=1):
+def sig_bkg_histos(files, isMC, trees, mass, lifetime, selections, var, output_names, bins, year, histo_names=[], bkg_weight=True, lumi_scaling=1):
     '''
     files = path to the root data/MC files to construct the histos from
     isMC = is the file MC or not (matters because it gets weighted and scaled correctly if it is)
@@ -47,7 +47,7 @@ def sig_bkg_histos(files, isMC, trees, selections, var, output_names, bins, year
 
     EXAMPLE:
 
-    sig_bkg_histos(["path/to/MC", "path/to/bkg"], [1, 0], ["ggH4g", "ggH4g"], ["best_4g_phi1_dxy_m30>50", "best_4g_phi2_dxy_m30<50"], "best_4g_cor_mass_m30", ["output1.root", "output2.root"], [["hist1", "hist2"], ["hist3", "hist4"]])
+    sig_bkg_histos(["path/to/MC", "path/to/bkg"], [1, 0], ["ggH4g", "ggH4g"], ["best_4g_phi1_dxy_m{mass}>50", "best_4g_phi2_dxy_m{mass}<50"], "best_4g_cor_mass_m{mass}", ["output1.root", "output2.root"], [["hist1", "hist2"], ["hist3", "hist4"]])
     '''
 
     sample_sigma=52.143
@@ -85,7 +85,7 @@ def sig_bkg_histos(files, isMC, trees, selections, var, output_names, bins, year
     
 
     if len(output_names) != len(selections):
-        print("ERROR: the number of selections must match the number of desired saved output file names. one saved file for each selection")
+        print(f"ERROR: the number of selections must match the number of desired saved output file names. one saved file for each selection")
         return
 
     selection_num = len(selections)
@@ -105,10 +105,10 @@ def sig_bkg_histos(files, isMC, trees, selections, var, output_names, bins, year
     output_raw_bkg = ROOT.TFile(f"rate_histos_raw_bkg_{year}.root", "RECREATE")
     raw_rdf_bkg=ROOT.RDataFrame(trees[1], files[1]) 
 
-    raw_rdf_bkg=raw_rdf_bkg.Filter("HLT_passed==1 && Photon_preselection[best_4g_idx1_m30]==1 && Photon_preselection[best_4g_idx2_m30]==1 && Photon_preselection[best_4g_idx3_m30]==1 && Photon_preselection[best_4g_idx4_m30]==1 && best_4g_phi1_dxy_m30>-20 && best_4g_phi2_dxy_m30>-20")
+    raw_rdf_bkg=raw_rdf_bkg.Filter(f"HLT_passed==1 && Photon_preselection[best_4g_idx1_m{mass}]==1 && Photon_preselection[best_4g_idx2_m{mass}]==1 && Photon_preselection[best_4g_idx3_m{mass}]==1 && Photon_preselection[best_4g_idx4_m{mass}]==1 && best_4g_phi1_dxy_m{mass}>-20 && best_4g_phi2_dxy_m{mass}>-20")
 
     if double_photon: 
-        raw_rdf_bkg=raw_rdf_bkg.Define(f"top2_pT_over_{PT_MIN}", "passPtCut(best_4g_phi1_gamma1_pt_m30,best_4g_phi1_gamma2_pt_m30,best_4g_phi2_gamma1_pt_m30,best_4g_phi2_gamma2_pt_m30)").Define("pTpair", "getLeadSub(best_4g_phi1_gamma1_pt_m30,best_4g_phi1_gamma2_pt_m30,best_4g_phi2_gamma1_pt_m30,best_4g_phi2_gamma2_pt_m30)").Define("LeadpT", "pTpair.l").Define("subLeadpT", "pTpair.s")
+        raw_rdf_bkg=raw_rdf_bkg.Define(f"top2_pT_over_{PT_MIN}", f"passPtCut(best_4g_phi1_gamma1_pt_m{mass},best_4g_phi1_gamma2_pt_m{mass},best_4g_phi2_gamma1_pt_m{mass},best_4g_phi2_gamma2_pt_m{mass})").Define("pTpair", f"getLeadSub(best_4g_phi1_gamma1_pt_m{mass},best_4g_phi1_gamma2_pt_m{mass},best_4g_phi2_gamma1_pt_m{mass},best_4g_phi2_gamma2_pt_m{mass})").Define("LeadpT", "pTpair.l").Define("subLeadpT", "pTpair.s")
         raw_rdf_bkg = raw_rdf_bkg.Filter(f"top2_pT_over_{PT_MIN}==1")
 
     raw_hist_bkg=raw_rdf_bkg.Histo1D(("bkg_hist", f"bkg_hist;{var};Events", bins[0], bins[1], bins[2]),f"{var}")
@@ -155,22 +155,23 @@ def sig_bkg_histos(files, isMC, trees, selections, var, output_names, bins, year
             rdf_j_k=ROOT.RDataFrame(trees[k], files[k])
     
             #common filters for both signal and backgroound
-            rdf_j_k = rdf_j_k.Filter("HLT_passed==1 && best_4g_phi1_dxy_m30>-20 && best_4g_phi2_dxy_m30>-20").Filter(selection_j)
+            rdf_j_k = rdf_j_k.Filter(f"HLT_passed==1 && best_4g_phi1_dxy_m{mass}>-20 && best_4g_phi2_dxy_m{mass}>-20").Filter(selection_j)
 
             #if we want to test the double photon trigger
             if double_photon:
-                rdf_j_k=rdf_j_k.Define(f"top2_pT_over_{PT_MIN}", "passPtCut(best_4g_phi1_gamma1_pt_m30,best_4g_phi1_gamma2_pt_m30,best_4g_phi2_gamma1_pt_m30,best_4g_phi2_gamma2_pt_m30)").Define("pTpair", "getLeadSub(best_4g_phi1_gamma1_pt_m30,best_4g_phi1_gamma2_pt_m30,best_4g_phi2_gamma1_pt_m30,best_4g_phi2_gamma2_pt_m30)").Define("LeadpT", "pTpair.l").Define("subLeadpT", "pTpair.s")
+                rdf_j_k=rdf_j_k.Define(f"top2_pT_over_{PT_MIN}", f"passPtCut(best_4g_phi1_gamma1_pt_m{mass},best_4g_phi1_gamma2_pt_m{mass},best_4g_phi2_gamma1_pt_m{mass},best_4g_phi2_gamma2_pt_m{mass})")
+                rdf_j_k=rdf_j_k.Define("pTpair", f"getLeadSub(best_4g_phi1_gamma1_pt_m{mass},best_4g_phi1_gamma2_pt_m{mass},best_4g_phi2_gamma1_pt_m{mass},best_4g_phi2_gamma2_pt_m{mass})").Define("LeadpT", "pTpair.l").Define("subLeadpT", "pTpair.s")
                 rdf_j_k = rdf_j_k.Filter(f"top2_pT_over_{PT_MIN}==1")
     
 
             #this if/else statement then filters beyond the common filters depending on if its signal or background, then writes and saves the histos
             if isMC[k]:
                 weight_formula_k = f"(genWeight / {sumw_dict[files[k]]}) * {sample_sigma} * {BR} * Pileup_weight"
-                rdf_j_k = rdf_j_k.Filter("best_4g_ID_m30==1&&best_4g_passBitMap_loose_iso_m30==1").Define("event_weight", weight_formula_k)
-                #rdf_j_k = rdf_j_k.Filter("best_4g_ID_m30==1&&((Photon_isScEtaEB[best_4g_idx1_m30]==1 && Photon_corrIso_m30[best_4g_idx1_m30]<0.1)||(Photon_isScEtaEE[best_4g_idx1_m30]==1 && Photon_corrIso_m30[best_4g_idx1_m30]<0.1)) && ((Photon_isScEtaEB[best_4g_idx2_m30]==1 && Photon_corrIso_m30[best_4g_idx2_m30]<0.1)||(Photon_isScEtaEE[best_4g_idx2_m30]==1 && Photon_corrIso_m30[best_4g_idx2_m30]<0.1)) && ((Photon_isScEtaEB[best_4g_idx3_m30]==1 && Photon_corrIso_m30[best_4g_idx3_m30]<0.1)||(Photon_isScEtaEE[best_4g_idx3_m30]==1 && Photon_corrIso_m30[best_4g_idx3_m30]<0.1)) && ((Photon_isScEtaEB[best_4g_idx4_m30]==1 && Photon_corrIso_m30[best_4g_idx4_m30]<0.1)||(Photon_isScEtaEE[best_4g_idx4_m30]==1 && Photon_corrIso_m30[best_4g_idx4_m30]<0.1))").Define("event_weight", weight_formula_k)
+                rdf_j_k = rdf_j_k.Filter(f"best_4g_ID_m{mass}==1&&best_4g_passBitMap_loose_iso_m{mass}==1").Define("event_weight", weight_formula_k)
+                #rdf_j_k = rdf_j_k.Filter("best_4g_ID_m{mass}==1&&((Photon_isScEtaEB[best_4g_idx1_m{mass}]==1 && Photon_corrIso_m{mass}[best_4g_idx1_m{mass}]<0.1)||(Photon_isScEtaEE[best_4g_idx1_m{mass}]==1 && Photon_corrIso_m{mass}[best_4g_idx1_m{mass}]<0.1)) && ((Photon_isScEtaEB[best_4g_idx2_m{mass}]==1 && Photon_corrIso_m{mass}[best_4g_idx2_m{mass}]<0.1)||(Photon_isScEtaEE[best_4g_idx2_m{mass}]==1 && Photon_corrIso_m{mass}[best_4g_idx2_m{mass}]<0.1)) && ((Photon_isScEtaEB[best_4g_idx3_m{mass}]==1 && Photon_corrIso_m{mass}[best_4g_idx3_m{mass}]<0.1)||(Photon_isScEtaEE[best_4g_idx3_m{mass}]==1 && Photon_corrIso_m{mass}[best_4g_idx3_m{mass}]<0.1)) && ((Photon_isScEtaEB[best_4g_idx4_m{mass}]==1 && Photon_corrIso_m{mass}[best_4g_idx4_m{mass}]<0.1)||(Photon_isScEtaEE[best_4g_idx4_m{mass}]==1 && Photon_corrIso_m{mass}[best_4g_idx4_m{mass}]<0.1))").Define("event_weight", weight_formula_k)
 
                 if EGM:
-                    EGM_ID = " && ".join(f"((Photon_isScEtaEB[best_4g_idx{i}_m30]==1 && Photon_hoe[best_4g_idx{i}_m30]<0.04596 && Photon_sieie[best_4g_idx{i}_m30]<0.0106)||(Photon_isScEtaEE[best_4g_idx{i}_m30]==1 && Photon_hoe[best_4g_idx{i}_m30]<0.0590 && Photon_sieie[best_4g_idx{i}_m30]<0.0272))" for i in range(1, 5))
+                    EGM_ID = " && ".join(f"((Photon_isScEtaEB[best_4g_idx{i}_m{mass}]==1 && Photon_hoe[best_4g_idx{i}_m{mass}]<0.04596 && Photon_sieie[best_4g_idx{i}_m{mass}]<0.0106)||(Photon_isScEtaEE[best_4g_idx{i}_m{mass}]==1 && Photon_hoe[best_4g_idx{i}_m{mass}]<0.0590 && Photon_sieie[best_4g_idx{i}_m{mass}]<0.0272))" for i in range(1, 5))
                     rdf_j_k = rdf_j_k.Filter(f"{EGM_ID}")
 
                 hist_j_k = rdf_j_k.Histo1D((f"{histo_names[j][k]}", f"{j}_{k};{var};Events", bins[0], bins[1], bins[2]), f"{var}", "event_weight")
@@ -187,10 +188,10 @@ def sig_bkg_histos(files, isMC, trees, selections, var, output_names, bins, year
                 histo_obj[j].append(hist_j_k)
 
             else:
-                rdf_j_k = rdf_j_k.Filter("Photon_preselection[best_4g_idx1_m30]==1 && Photon_preselection[best_4g_idx2_m30]==1 && Photon_preselection[best_4g_idx3_m30]==1 && Photon_preselection[best_4g_idx4_m30]==1")
+                rdf_j_k = rdf_j_k.Filter(f"Photon_preselection[best_4g_idx1_m{mass}]==1 && Photon_preselection[best_4g_idx2_m{mass}]==1 && Photon_preselection[best_4g_idx3_m{mass}]==1 && Photon_preselection[best_4g_idx4_m{mass}]==1")
 
                 #if EGM:
-                #    EGM_ID = " && ".join(f"((Photon_isScEtaEB[best_4g_idx{i}_m30]==1 && Photon_hoe[best_4g_idx{i}_m30]<0.04596 && Photon_sieie[best_4g_idx{i}_m30]<0.0106)||(Photon_isScEtaEE[best_4g_idx{i}_m30]==1 && Photon_hoe[best_4g_idx{i}_m30]<0.0590 && Photon_sieie[best_4g_idx{i}_m30]<0.0272))" for i in range(1, 5))
+                #    EGM_ID = " && ".join(f"((Photon_isScEtaEB[best_4g_idx{i}_m{mass}]==1 && Photon_hoe[best_4g_idx{i}_m{mass}]<0.04596 && Photon_sieie[best_4g_idx{i}_m{mass}]<0.0106)||(Photon_isScEtaEE[best_4g_idx{i}_m{mass}]==1 && Photon_hoe[best_4g_idx{i}_m{mass}]<0.0590 && Photon_sieie[best_4g_idx{i}_m{mass}]<0.0272))" for i in range(1, 5))
                 #    rdf_j_k = rdf_j_k.Filter(f"{EGM_ID}")
 
 
