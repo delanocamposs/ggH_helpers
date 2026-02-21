@@ -276,37 +276,3 @@ def plot(MultiDimFit, fitDiagnosticsTest, cat, year, bins, finalstate, physics, 
             can.SaveAs(f"postfit_{cat}_{year}_prefit.pdf")
         loop+=1
 
-def combine_workflow(cat, year, finalstate, physics):
-    subprocess.run(["text2workspace.py", f"datacard_{physics}_{finalstate}_{cat}_{year}.txt", "-o", f"datacard_{physics}_{finalstate}_{cat}_{year}.root"])
-    subprocess.run(["combine", f"datacard_{physics}_{finalstate}_{cat}_{year}.root", "-M", "MultiDimFit", "--saveWorkspace", "--robustFit", "1","--cminDefaultMinimizerStrategy", "0", "-m", "125"])
-    subprocess.run(["combine", f"datacard_{physics}_{finalstate}_{cat}_{year}.root", "-M", "FitDiagnostics", "--saveShapes", "--saveWorkspace", "--saveWithUncertainties", "--saveNormalizations", "--robustFit", "1", "--cminDefaultMinimizerStrategy", "2", "-m", "125"])
-    subprocess.run(["mv", "higgsCombineTest.MultiDimFit.mH125.root", f"higgsCombineTest.MultiDimFit.mH125_{cat}_{year}.root"])
-    subprocess.run(["mv", "fitDiagnosticsTest.root", f"fitDiagnosticsTest_{cat}_{year}.root"])
-
-def combined_datacard(year, cats, finalstate, physics):
-    if len(cats)==1:
-        print("ERROR: need to combine one or more categories.")
-    if len(cats)>4:
-        print("ERROR: only 4 categories exist. ")
-    if len(cats)==2:
-        subprocess.run(["combineCards.py", f"datacard_{physics}_{finalstate}_{cats[0]}_{year}.txt",f"datacard_{physics}_{finalstate}_{cats[1]}_{year}.txt", ">", f"datacard_{physics}_{finalstate}_{cat[0]}_{cat[1]}_{year}.txt"])
-    if len(cats)==3:
-        subprocess.run(["combineCards.py", f"datacard_{physics}_{finalstate}_{cats[0]}_{year}.txt",f"datacard_{physics}_{finalstate}_{cats[1]}_{year}.txt",f"datacard_{physics}_{finalstate}_{cats[2]}_{year}.txt", ">", f"datacard_{physics}_{finalstate}_{cat[0]}_{cat[1]}_{cat[2]}_{cats[3]}_{year}.txt"])
-    if len(cats)==4:
-        subprocess.run(["combineCards.py", f"datacard_{physics}_{finalstate}_{cats[0]}_{year}.txt",f"datacard_{physics}_{finalstate}_{cats[1]}_{year}.txt",f"datacard_{physics}_{finalstate}_{cats[0]}_{year}.txt",f"datacard_{physics}_{finalstate}_{cats[3]}_{year}.txt", ">", f"datacard_{physics}_{finalstate}_{cat[0]}_{cat[1]}_{cats[2]}_{cats[3]}_{year}.txt"])
-
-
-
-def run(cat, year, finalstate, physics, bins):
-    main(paths=["ggH_M30_ctau0_ggH4g.root", "EGamma_2018_all_ggH4g.root"], isMC=[1,0], trees=["ggH4g","ggH4g"], var="best_4g_corr_mass_m30", categories=[cat],period=year, bins=bins, lumi_scaling=1)
-    combine_workflow(cat, year, finalstate, physics)
-    plot(f"higgsCombineTest.MultiDimFit.mH125_{cat}_{year}.root", f"fitDiagnosticsTest_{cat}_{year}.root",f"{cat}", f"{year}", bins=bins, finalstate=finalstate, physics=physics, order=3)
-
-
-
-if __name__=="__main__":
-    #run("low", "2018", "4g", "ggH", bins=[60, 110, 140])
-    #run("high", "2018", "4g", "ggH", bins=[60, 110, 140])
-    #run("asym", "2018", "4g", "ggH", bins=[60, 110, 140])
-    run("all", "2018", "4g", "ggH", bins=[60, 110, 140])
-    
