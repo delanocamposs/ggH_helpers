@@ -15,6 +15,7 @@ if __name__=="__main__":
     args = parser.parse_args()
     mass=args.mass
     lifetime=args.ctau
+    year=args.year
 
     categories = []
     for c in ["c1", "c2", "c3", "c4"]:
@@ -22,7 +23,8 @@ if __name__=="__main__":
         if argu is not None:
             categories.append(argu)
     print(categories)
-    main(paths=[args.signal, args.background], isMC=[1,0], trees=["ggH4g","ggH4g"], var=f"best_4g_corr_mass_m{mass}", categories=categories,period=args.year, bins=[33, 120, 130], lifetime=lifetime, mass=mass)
-    #subprocess.run(["text2workspace.py", f"datacard_ggH_4g_lowlow_{}_{t}_{o}.txt", "-o", f"datacard_ggH_4g_lowlow_2018_{t}_{o}.root"])
-    #subprocess.run(["combine", "-M", "FitDiagnostics", f"datacard_ggH_4g_lowlow_2018_{t}_{o}.root", "--saveShapes", "--saveWithUncertainties", "--saveNormalizations", "--saveWorkspace", "-m", "125"])
-    #subprocess.run(["mv", "fitDiagnosticsTest.root", f"fitDiagnosticsTest_{t}_{o}.root"])
+    main(paths=[args.signal, args.background], isMC=[1,0], trees=["ggH4g","ggH4g"], var=f"best_4g_corr_mass_m{mass}", categories=categories,period=year, bins=[33, 120, 130], lifetime=lifetime, mass=mass)
+    for cat in categories:
+        subprocess.run(["text2workspace.py", f"datacard_ggH_4g_m{mass}_ct{lifetime}_{cat}_{year}.txt", "-o", f"datacard_ggH_4g_m{mass}_ct{lifetime}_{cat}_{year}.root"])
+        subprocess.run(["combine", "-M", "FitDiagnostics", f"datacard_ggH_4g_m{mass}_ct{lifetime}_{cat}_{year}.root", "--saveShapes", "--saveWithUncertainties", "--saveNormalizations", "--saveWorkspace", "-m", "125"])
+        subprocess.run(["mv", "fitDiagnosticsTest.root", f"fitDiagnosticsTest_m{mass}_ct{lifetime}_{cat}_{year}.root"])
