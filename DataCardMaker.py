@@ -14,7 +14,7 @@ class DataCardMaker:
         self.contributions=[]
         self.systematics=[]
 
-        self.tag=self.physics+"_"+self.finalstate+"_ct"+self.lifetime+"_m"+self.mass+"_"+self.category+"_"+self.period
+        self.tag=self.physics+"_"+self.finalstate+"_m"+self.mass+"_ct"+self.lifetime+"_"+self.category+"_"+self.period
         self.rootFile = ROOT.TFile("datacardInputs_"+self.tag+".root","RECREATE")
         self.rootFile.cd()
         self.w=ROOT.RooWorkspace("w","w")

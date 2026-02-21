@@ -14,6 +14,7 @@ import glob
 ROOT.gROOT.SetBatch(False)
 
 def cleanup(year, finalstate, physics, cat, mass, lifetime):
+    subprocess.run(["rm", f"cache.root"])
     subprocess.run(["mkdir", f"m{mass}_ct{lifetime}_{cat}_{year}_{finalstate}_{physics}"])
     subprocess.run(["mv", f"fit_bkg_m{mass}_ct{lifetime}_{cat}_{year}_fit.root", f"m{mass}_ct{lifetime}_{cat}_{year}_{finalstate}_{physics}/"])
     subprocess.run(["mv", f"fit_bkg_m{mass}_ct{lifetime}_{cat}_{year}_gen.root", f"m{mass}_ct{lifetime}_{cat}_{year}_{finalstate}_{physics}/"])
