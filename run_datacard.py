@@ -1,11 +1,11 @@
 from ggHdatacardmaker import *
 
 def combine_workflow(cat, year, mass, lifetime, finalstate, physics):
-    subprocess.run(["text2workspace.py", f"datacard_{physics}_{finalstate}_m{mass}_ct{lifetime}_{cat}_{year}.txt", "-o", f"datacard_{physics}_{finalstate}_m{mass}_ct{lifetime}_{cat}_{year}.root", shell=True])
-    subprocess.run(["combine", f"datacard_{physics}_{finalstate}_m{mass}_ct{lifetime}_{cat}_{year}.root", "-M", "MultiDimFit", "--saveWorkspace", "--robustFit", "1","--cminDefaultMinimizerStrategy", "0", "-m", "125",shell=True])
-    subprocess.run(["combine", f"datacard_{physics}_{finalstate}_m{mass}_ct{lifetime}_{cat}_{year}.root", "-M", "FitDiagnostics", "--saveShapes", "--saveWorkspace", "--saveWithUncertainties", "--saveNormalizations", "--robustFit", "1", "--cminDefaultMinimizerStrategy", "2", "-m", "125",shell=True])
-    subprocess.run(["mv", "higgsCombineTest.MultiDimFit.mH125.root", f"higgsCombineTest.MultiDimFit.mH125_m{mass}_ct{lifetime}_{cat}_{year}.root",shell=True])
-    subprocess.run(["mv", "fitDiagnosticsTest.root", f"fitDiagnosticsTest_m{mass}_ct{lifetime}_{cat}_{year}.root",shell=True])
+    subprocess.run(["text2workspace.py", f"datacard_{physics}_{finalstate}_m{mass}_ct{lifetime}_{cat}_{year}.txt", "-o", f"datacard_{physics}_{finalstate}_m{mass}_ct{lifetime}_{cat}_{year}.root"],shell=True)
+    subprocess.run(["combine", f"datacard_{physics}_{finalstate}_m{mass}_ct{lifetime}_{cat}_{year}.root", "-M", "MultiDimFit", "--saveWorkspace", "--robustFit", "1","--cminDefaultMinimizerStrategy", "0", "-m", "125"], shell=True)
+    subprocess.run(["combine", f"datacard_{physics}_{finalstate}_m{mass}_ct{lifetime}_{cat}_{year}.root", "-M", "FitDiagnostics", "--saveShapes", "--saveWorkspace", "--saveWithUncertainties", "--saveNormalizations", "--robustFit", "1", "--cminDefaultMinimizerStrategy", "2", "-m", "125"], shell=True)
+    subprocess.run(["mv", "higgsCombineTest.MultiDimFit.mH125.root", f"higgsCombineTest.MultiDimFit.mH125_m{mass}_ct{lifetime}_{cat}_{year}.root"], shell=True)
+    subprocess.run(["mv", "fitDiagnosticsTest.root", f"fitDiagnosticsTest_m{mass}_ct{lifetime}_{cat}_{year}.root"], shell=True)
 
 def combined_datacard(year, cats, mass, lifetime, finalstate, physics):
     if len(cats)==1:
@@ -13,9 +13,9 @@ def combined_datacard(year, cats, mass, lifetime, finalstate, physics):
     if len(cats)>3:
         print("ERROR: only 3 categories exist. ")
     if len(cats)==2:
-        subprocess.run(["combineCards.py", f"datacard_{physics}_{finalstate}_m{mass}_ct{lifetime}_{cats[0]}_{year}.txt",f"datacard_{physics}_{finalstate}_m{mass}_ct{lifetime}_{cats[1]}_{year}.txt", ">", f"datacard_{physics}_{finalstate}_m{mass}_ct{lifetime}_{cats[0]}_{cats[1]}_{year}.txt", shell=True])
+        subprocess.run(["combineCards.py", f"datacard_{physics}_{finalstate}_m{mass}_ct{lifetime}_{cats[0]}_{year}.txt",f"datacard_{physics}_{finalstate}_m{mass}_ct{lifetime}_{cats[1]}_{year}.txt", ">", f"datacard_{physics}_{finalstate}_m{mass}_ct{lifetime}_{cats[0]}_{cats[1]}_{year}.txt"], shell=True)
     if len(cats)==3:
-        subprocess.run(["combineCards.py", f"datacard_{physics}_{finalstate}_m{mass}_ct{lifetime}_{cats[0]}_{year}.txt",f"datacard_{physics}_{finalstate}_m{mass}_ct{lifetime}_{cats[1]}_{year}.txt",f"datacard_{physics}_{finalstate}_m{mass}_ct{lifetime}_{cats[2]}_{year}.txt", ">", f"datacard_{physics}_{finalstate}_m{mass}_ct{lifetime}_{cats[0]}_{cats[1]}_{cats[2]}_{year}.txt", shell=True])
+        subprocess.run(["combineCards.py", f"datacard_{physics}_{finalstate}_m{mass}_ct{lifetime}_{cats[0]}_{year}.txt",f"datacard_{physics}_{finalstate}_m{mass}_ct{lifetime}_{cats[1]}_{year}.txt",f"datacard_{physics}_{finalstate}_m{mass}_ct{lifetime}_{cats[2]}_{year}.txt", ">", f"datacard_{physics}_{finalstate}_m{mass}_ct{lifetime}_{cats[0]}_{cats[1]}_{cats[2]}_{year}.txt"], shell=True)
 
 def run(signal, bkg, cat, year, mass, lifetime, finalstate, physics, bins):
     main(paths=[signal, bkg], isMC=[1,0], trees=["ggH4g","ggH4g"], var=f"best_4g_corr_mass_m{mass}", categories=[cat],period=year, bins=bins, lifetime=lifetime, mass=mass)
