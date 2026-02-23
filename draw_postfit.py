@@ -41,16 +41,14 @@ def getPoisson2(h, scale):
     return gRate
 
 def plot(MultiDimFit, fitDiagnosticsTest, cat, year, bins, finalstate, physics, mass, lifetime, order=3):
+    lumi={"2016":"", "2017":"", "2018":"58", "2022":"", "2023":"", "2024":""}
     loop=0
     for j in range(2):
         tdrstyle.setTDRStyle()
         CMS_lumi.writeExtraText = True
         CMS_lumi.extraText    = "Preliminary"
 
-        if year=="2018":
-            CMS_lumi.lumi_13TeV   = "2018, 59 fb^{-1}"
-        if year=="Run-2":
-            CMS_lumi.lumi_13TeV   = "Run-2, 101 fb^{-1}"
+        CMS_lumi.lumi_13TeV   = f"{year}, {lumi[year]} fb^{-1}"
             
         ROOT.gStyle.SetEndErrorSize(2)
         f1 = ROOT.TFile(MultiDimFit)
@@ -111,13 +109,13 @@ def plot(MultiDimFit, fitDiagnosticsTest, cat, year, bins, finalstate, physics, 
         gres1.SetMarkerStyle(20)
 
         #grab the s+b and b models from the RooWorkspace and get the normalizations of the models after the fits
-        sb_model  = w.pdf("model_s").getPdf(f"{physics}_{finalstate}_{cat}_2018")
-        b_model   = w.pdf("model_b").getPdf(f"{physics}_{finalstate}_{cat}_2018")
+        sb_model  = w.pdf("model_s").getPdf(f"{physics}_{finalstate}_m{mass}_ct{lifetime}_{cat}_{year}")
+        b_model   = w.pdf("model_b").getPdf(f"{physics}_{finalstate}_m{mass}_ct{lifetime}_{cat}_{year}")
         if loop==0:
             w.loadSnapshot("MultiDimFit")
         norm_fit = f2.Get("norm_fit_s")
-        bkg_norm = norm_fit.find(f"{physics}_{finalstate}_{cat}_2018/background").getVal()
-        sig_norm = norm_fit.find(f"{physics}_{finalstate}_{cat}_2018/signal").getVal()
+        bkg_norm = norm_fit.find(f"{physics}_{finalstate}_m{mass}_ct{lifetime}_{cat}_{year}/background").getVal()
+        sig_norm = norm_fit.find(f"{physics}_{finalstate}_m{mass}_ct{lifetime}_{cat}_{year}/signal").getVal()
         print("bkg norm: ", bkg_norm)
         print("sig norm: ", sig_norm)
 
