@@ -40,7 +40,7 @@ def getPoisson2(h, scale):
         n+=1
     return gRate
 
-def plot(MultiDimFit, fitDiagnosticsTest, cat, year, bins, finalstate, physics, order=3):
+def plot(MultiDimFit, fitDiagnosticsTest, cat, year, bins, finalstate, physics, mass, lifetime, order=3):
     loop=0
     for j in range(2):
         tdrstyle.setTDRStyle()
