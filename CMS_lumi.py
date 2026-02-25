@@ -28,11 +28,11 @@ extraOverCmsTextSize  = 0.76
 lumi_13TeV = "20.1"
 lumi_8TeV  = "19.7" 
 lumi_7TeV  = "5.1"
-lumi_sqrtS = "2018, 13 TeV"
 
 drawLogo      = False
 
-def CMS_lumi(pad,  iPeriod,  iPosX, relPosX = relPosX, relPosY = relPosY, relExtraDY = relExtraDY, lumi_13TeV = lumi_13TeV, extraText = extraText):
+def CMS_lumi(pad,  iPeriod,  iPosX, year, lumi, relPosX = relPosX, relPosY = relPosY, relExtraDY = relExtraDY, lumi_13TeV = lumi_13TeV, extraText = extraText):
+    lumi_sqrtS = rf"{year}, {lumi/1000:.2f} fb^{{-1}}"
     outOfFrame    = False
     if(iPosX//10==0 ): outOfFrame = True
     alignY_=3

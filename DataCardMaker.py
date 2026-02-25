@@ -5,12 +5,12 @@ import json
 
 class DataCardMaker:
     def __init__(self,finalstate,category,period,lifetime,mass,luminosity=1.0,physics="ggH"):
-        self.physics=physics
-        self.lifetime=lifetime
-        self.mass=mass
-        self.finalstate=finalstate
-        self.category=category
-        self.period=period
+        self.physics=str(physics)
+        self.lifetime=str(lifetime)
+        self.mass=str(mass)
+        self.finalstate=str(finalstate)
+        self.category=str(category)
+        self.period=str(period)
         self.contributions=[]
         self.systematics=[]
 

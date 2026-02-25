@@ -40,7 +40,8 @@ def main(paths, isMC, trees, var, categories, period, bins, lifetime, mass, fina
     print("============================================================"+extra_str)
 
     ##luminosities in pb^-1 from: https://twiki.cern.ch/twiki/bin/view/CMS/LumiRecommendationsRun2
-    lumis = {"2016":[36310],
+    lumis = {"2016preVFP":[1/2*(36310)],
+             "2016postVFP":[1/2*(36310)],
              "2017":[41480], 
              "2018":[59830], 
              "Run-2":[137620],
@@ -76,7 +77,8 @@ def main(paths, isMC, trees, var, categories, period, bins, lifetime, mass, fina
                     "VBF":[0.021, 0.021]}
 
     #lumi unc obtained from: https://twiki.cern.ch/twiki/bin/view/CMS/LumiRecommendationsRun2
-    lumi_unc={"2016":[0.012],
+    lumi_unc={"2016preVFP":[0.012],
+              "2016postVFP":[0.012],
               "2017":[0.023],
               "2018":[0.025], 
               "Run2": [0.016]}
@@ -137,7 +139,7 @@ def main(paths, isMC, trees, var, categories, period, bins, lifetime, mass, fina
 
         workspace_file_cat_year = "datacardInputs_"+dcm_cat_year.tag+".root"
 
-        data_cat_year_name = ggHtools.generate_data_hist(f"fit_bkg_m{mass}_ct{lifetime}_{cat}_{year}_gen.root", bins_num=bins[0], norm=th1d_histo_obj[i][1].Integral(), output_name=f"data_obs_m{mass}_ct{lifetime}_{cat}_{year}.root")
+        data_cat_year_name = ggHtools.generate_data_hist(f"fit_bkg_m{mass}_ct{lifetime}_{cat}_{year}_gen.root", bins_num=bins[0], norm=bkg_rate, output_name=f"data_obs_m{mass}_ct{lifetime}_{cat}_{year}.root")
 
         dcm_cat_year.importBinnedData(data_cat_year_name, "h_pdf__mass", ["mass"])
             

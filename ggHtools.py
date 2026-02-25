@@ -60,23 +60,23 @@ def sig_bkg_histos(files, isMC, trees, mass, lifetime, selections, var, output_n
     #im simulating 33GeV double photon trigger here
     double_photon=False
     PT_MIN=33
-    ROOT.gInterpreter.Declare(f"""
-    bool passPtCut(float a,float b,float c,float d) {{
-        float lead=std::max({{a,b,c,d}});
-        float sub=-1e9f;
-        if(a!=lead) sub=a;
-        if(b!=lead && b>sub) sub=b;
-        if(c!=lead && c>sub) sub=c;
-        if(d!=lead && d>sub) sub=d;
-        return lead>={PT_MIN} && sub>={PT_MIN};
-    }}
-    struct Pair {{ float l; float s; }};
-    Pair getLeadSub(float a,float b,float c,float d) {{
-        float pts[4]={{a,b,c,d}};
-        std::sort(pts,pts+4,std::greater<float>());
-        return {{pts[0], pts[1]}};
-    }}
-    """)
+   # ROOT.gInterpreter.Declare(f"""
+   # bool passPtCut(float a,float b,float c,float d) {{
+   #     float lead=std::max({{a,b,c,d}});
+   #     float sub=-1e9f;
+   #     if(a!=lead) sub=a;
+   #     if(b!=lead && b>sub) sub=b;
+   #     if(c!=lead && c>sub) sub=c;
+   #     if(d!=lead && d>sub) sub=d;
+   #     return lead>={PT_MIN} && sub>={PT_MIN};
+   # }}
+   # struct Pair {{ float l; float s; }};
+   # Pair getLeadSub(float a,float b,float c,float d) {{
+   #     float pts[4]={{a,b,c,d}};
+   #     std::sort(pts,pts+4,std::greater<float>());
+   #     return {{pts[0], pts[1]}};
+   # }}
+   # """)
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     #now this is for testing the effects of the different ID'ing methods on the limit: loose EGM ID versus the custom loose ID we use. 
     EGM=False
@@ -137,7 +137,8 @@ def sig_bkg_histos(files, isMC, trees, mass, lifetime, selections, var, output_n
     #these dictionary values are scales for the background distribution according to what year is being processed. 
     #this needs to be done since hte 0.05124.... factor was derived from comparing sidebands of 2018 preselected vs ID data. 
     #if we want to interpolate to any other year having derived the initial scale factor from 2018, all years need their own additional weight normalized by 2018 lumi
-    bkg_factor={"2016":[36310/59830], 
+    bkg_factor={"2016preVFP":[1/2*(36310/59830)], 
+                "2016postVFP":[1/2*(36210/59830)],
                 "2017":[41480/59830], 
                 "2018":[1], 
                 "Run-2":[137620/59830], 
