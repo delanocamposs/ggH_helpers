@@ -8,25 +8,24 @@ ROOT.gROOT.SetBatch(True)
 ROOT.ROOT.EnableImplicitMT()
 
 lumi_dict={
-        "2016preVFP":36310,
-        "2016postVFP":36310,
+        #recommendation for pre/postVFP values here: https://twiki.cern.ch/twiki/bin/view/CMS/PdmVDatasetsUL2016
+        "2016preVFP":19500,
+        "2016postVFP":16800,
         "2017":41480,
         "2018":59830,
-        "Run 2":137620,
+        "Run2":137620,
         "2022":34748,
         "2023":27245,
         "2024":59830,
-        "Run 3":170857
+        "Run3":170857
         }
 
 
 def run(mass, ctau, year):
     BR=1e-4
     xsec=52.143
-    lumi=59830
     cut_string=f"HLT_passed==1&&best_4g_phi1_dxy_m{mass}>-20&&best_4g_phi2_dxy_m{mass}>-20"
     preselection=f"(Photon_preselection[best_4g_idx1_m{mass}]==1)&&(Photon_preselection[best_4g_idx2_m{mass}]==1)&&(Photon_preselection[best_4g_idx3_m{mass}]==1)&&(Photon_preselection[best_4g_idx4_m{mass}]==1)"
-    #blind=f"(best_4g_corr_mass_m{mass}<110)"
     blind=f"((best_4g_corr_mass_m{mass}<110)||(best_4g_corr_mass_m{mass}>140))"
     
     
@@ -60,7 +59,7 @@ def run(mass, ctau, year):
     data_pre_df=data_pre_df.Filter(f"{cut_string}&&{preselection}&&{blind}")
     
     signal_histo=signal_df.Histo1D(("hist1_1", f"hist1_1;{var};Events", bins[0], bins[1], bins[2]), f"{var}", "event_weight")
-    signal_histo.Scale(lumi)
+    signal_histo.Scale(lumi_dict[year])
     
     data_ID_histo=data_ID_df.Histo1D(("hist2", f"hist2;4#gamma mass;Events", bins[0], bins[1], bins[2]), f"{var}")
     data_pre_histo=data_pre_df.Histo1D(("hist3", f"hist3;4#gamma mass;Events", bins[0], bins[1], bins[2]), f"{var}")
