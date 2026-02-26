@@ -12,6 +12,9 @@ class Fitter(object):
         for v in poi:
             self.w.factory(v+"[100,160]")
 
+    def setRange(self,name,poi,low,high):
+        self.w.var(poi).setRange(name,low,high)
+
 
     def factory(self,expr):
         self.w.factory(expr)
@@ -726,18 +729,11 @@ class Fitter(object):
             
 
 
-
-    def fit(self,model = "model",data="data",options=[]):
-        if len(options)==0:
-            self.w.pdf(model).fitTo(self.w.data("data"))
-        if len(options)==1:
-            self.w.pdf(model).fitTo(self.w.data("data"),options[0])
-        if len(options)==2:
-            self.w.pdf(model).fitTo(self.w.data("data"),options[0],options[1])
-        if len(options)==3:
-            self.w.pdf(model).fitTo(self.w.data("data"),options[0],options[1],options[2])
-        if len(options)==4:
-            self.w.pdf(model).fitTo(self.w.data("data"),options[0],options[1],options[2],options[3])
+    def fit(self, model="model", data="data", options=[], fitRange=None):
+        opts = list(options)
+        if fitRange:
+            opts.append(ROOT.RooFit.Range(fitRange))
+        self.w.pdf(model).fitTo(self.w.data(data), *opts)
 
 
     def fetch(self,var):
