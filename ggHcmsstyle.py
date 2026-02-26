@@ -26,7 +26,7 @@ class CMSstyle:
         self.l.SetTextSize(0.03)
 
         self.tex.SetNDC()
-        self.tex.SetTextSize(0.04)
+        self.tex.SetTextSize(0.03)
         self.tex.SetTextFont(42)
         i=0
         for entry in self.tex_entries:

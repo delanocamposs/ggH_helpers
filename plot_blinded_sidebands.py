@@ -27,6 +27,7 @@ def run(mass, ctau, year):
     cut_string=f"HLT_passed==1&&best_4g_phi1_dxy_m{mass}>-20&&best_4g_phi2_dxy_m{mass}>-20"
     preselection=f"(Photon_preselection[best_4g_idx1_m{mass}]==1)&&(Photon_preselection[best_4g_idx2_m{mass}]==1)&&(Photon_preselection[best_4g_idx3_m{mass}]==1)&&(Photon_preselection[best_4g_idx4_m{mass}]==1)"
     blind=f"((best_4g_corr_mass_m{mass}<110)||(best_4g_corr_mass_m{mass}>140))"
+    #blind=f"(best_4g_corr_mass_m{mass}<110)"
     
     
     c=ROOT.TCanvas("", "", 800, 800)
@@ -58,7 +59,7 @@ def run(mass, ctau, year):
     data_ID_df=data_ID_df.Filter(f"{preselection}&&{cut_string}&&best_4g_ID_m{mass}==1&&{blind}")
     data_pre_df=data_pre_df.Filter(f"{cut_string}&&{preselection}&&{blind}")
     
-    signal_histo=signal_df.Histo1D(("hist1_1", f"hist1_1;{var};Events", bins[0], bins[1], bins[2]), f"{var}", "event_weight")
+    signal_histo=signal_df.Histo1D(("hist1_1", f"hist1_1;{var};Events", bins[0], bins[1], bins[2]), f"best_4g_corr_mass_m{mass}", "event_weight")
     signal_histo.Scale(lumi_dict[year])
     
     data_ID_histo=data_ID_df.Histo1D(("hist2", f"hist2;4#gamma mass;Events", bins[0], bins[1], bins[2]), f"{var}")
@@ -128,6 +129,8 @@ def run(mass, ctau, year):
     
     c.Update()
     c.SaveAs(f"ID_pre_sideband_{year}_ct{ctau}_m{mass}.png")
+    SF=N_data_ID/N_data_pre
+    print(f"SF={SF}") 
 
 
 if __name__=="__main__":
