@@ -141,11 +141,11 @@ def sig_bkg_histos(files, isMC, trees, mass, lifetime, selections, var, output_n
                 "2016postVFP":[1/2*(36210/59830)],
                 "2017":[41480/59830], 
                 "2018":[1], 
-                "Run-2":[137620/59830], 
+                "Run2":[137620/59830], 
                 "2022":[34748/59830], 
                 "2023":[27245/59830], 
                 "2024":[108920/59830], 
-                "Run-3":[170857/59830]}
+                "Run3":[170857/59830]}
 
     for j in range(len(selections)):
         selection_j = selections[j]

@@ -41,33 +41,30 @@ def fitSIG(file, hist, output_name, POI="mass", verbose=False):
 
 
 
-def fitSIGBKG(file, sighist, bkghist,output_name, order=3, POI="mass"):
+def fitSIGBKG(file, sighist, bkghist,output_name, order, POI="mass"):
     f = ROOT.TFile(file)
     signal = f.Get(sighist)
     bkg = f.Get(bkghist)
 
-    fitterS = Fitter([POI])
-    fitterB = Fitter([POI])
-
-    fitterS.doubleCB('model_s',POI)
-    fitterB.bernstein('model_b',POI,order=order)
+    fitter = Fitter([POI])
+    fitter.DCBandBernstein(order)
     
-    fitterS.importBinnedData(signal,[POI], "data_s")
-    fitterB.importBinnedData(bkg,[POI], "data_b")
+    fitter.importBinnedData(signal,[POI], "data_s")
+    fitter.importBinnedData(bkg,[POI], "data_b")
 
-    fitterB.setRange("lower", "mass", 70,110)
-    fitterB.setRange("upper", "mass", 140,180)
+    fitter.fit("model_s","data_s")
 
-    fitterB.fit("model_b","data_b",fitRange="lower,upper")
-    fitterS.fit("model_s","data_s")
+    fitter.setRange("lower", "mass", 70,110)
+    fitter.setRange("upper", "mass", 140,180)
 
-    chi2S = fitterS.projection("model_s","data_s",POI,filename=output_name)
-    chi2B = fitterB.projection("model_b","data_b",POI,filename=output_name)
+    fitter.fit("model_b","data_b",fitRange="lower,upper")
+
+    #chi2S = fitter.projection("model_s","data_s",POI,filename=output_name)
+    #chi2B = fitter.projection("model_b","data_b",POI,filename=output_name)
 
     output = ROOT.TFile(output_name, "UPDATE")
     output.cd()
-    fitterS.w.Write("w")
-    fitterB.w.Write("w")
+    fitter.w.Write("w")
     output.Close()
     return
 

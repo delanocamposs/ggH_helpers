@@ -29,7 +29,7 @@ def combined_datacard(year, cats, mass, lifetime, finalstate, physics):
 def run(signal, bkg, cat, year, mass, lifetime, finalstate, physics, bins):
     main(paths=[signal, bkg], isMC=[1,0], trees=["ggH4g","ggH4g"], var=f"best_4g_corr_mass_m{mass}", categories=[cat],period=year, bins=bins, lifetime=lifetime, mass=mass, lumi_scaling=1)
     combine_workflow(cat, year,mass, lifetime, finalstate, physics)
-    #plot(f"higgsCombineTest.MultiDimFit.mH125_m{mass}_ct{lifetime}_{cat}_{year}.root", f"fitDiagnosticsTest_m{mass}_ct{lifetime}_{cat}_{year}.root",f"{cat}", f"{year}", bins=bins, finalstate=finalstate, physics=physics, mass=mass, lifetime=lifetime, order=3)
+    plot(f"higgsCombineTest.MultiDimFit.mH125_m{mass}_ct{lifetime}_{cat}_{year}.root", f"fitDiagnosticsTest_m{mass}_ct{lifetime}_{cat}_{year}.root",f"{cat}", f"{year}", bins=bins, finalstate=finalstate, physics=physics, mass=mass, lifetime=lifetime, order=3)
 
 if __name__=="__main__":
     parser = argparse.ArgumentParser("Datacard Processing for year, category")

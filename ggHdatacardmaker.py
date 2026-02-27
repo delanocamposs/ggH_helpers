@@ -44,11 +44,11 @@ def main(paths, isMC, trees, var, categories, period, bins, lifetime, mass, fina
              "2016postVFP":[1/2*(36310)],
              "2017":[41480], 
              "2018":[59830], 
-             "Run-2":[137620],
+             "Run2":[137620],
              "2022":[34748], 
              "2023":[27245], 
              "2024":[108920], 
-             "Run-3":[170857]}
+             "Run3":[170857]}
 
 
     #combining HL and LH into one category now and renaming to simplify
