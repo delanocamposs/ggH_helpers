@@ -181,7 +181,7 @@ class Fitter(object):
         self.w.factory("n1[2,0,20]")
         self.w.factory("alpha2[2,1,20]")
         self.w.factory("n2[2,0,20]")
-        doubleCB = ROOT.RooDoubleCB(dcbname,dcbname,self.w.var(poi),self.w.var("mean"),self.w.var("sigma"),self.w.var("alpha1"),self.w.var("n1"),self.w.var("alpha2"),self.w.var("n2"))
+        self.w.factory(f"RooDoubleCB::{dcbname}({poi},mean,sigma,alpha1,n1,alpha2,n2)")
 
         cList = ROOT.RooArgList()
         for i in range(0,order):
@@ -189,10 +189,8 @@ class Fitter(object):
             cList.add(self.w.var("c_"+str(i)))
         bernsteinPDF = ROOT.RooBernsteinFast(order)(bname,bname,self.w.var(poi),cList)
 
-        self.w.factory(f"r[0.5,0,100]")
-        self.w.factory(f"SUM::{model_name}(r*{dcbname}, {bname})")
-        getattr(self.w,'import')(doubleCB,ROOT.RooFit.Rename(dcbname))
         getattr(self.w,'import')(bernsteinPDF,ROOT.RooFit.Rename(bname))
+        getattr(self.w,'import')(doubleCB,ROOT.RooFit.Rename(name))
         return
 
 

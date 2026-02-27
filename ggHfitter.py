@@ -47,7 +47,7 @@ def fitSIGBKG(file, sighist, bkghist,output_name, order, POI="mass"):
     bkg = f.Get(bkghist)
 
     fitter = Fitter([POI])
-    fitter.DCBandBernstein(order)
+    fitter.DCBandBernstein(order,dcbname="model_s",bname="model_b",poi=POI,model_name="model_sb")
     
     fitter.importBinnedData(signal,[POI], "data_s")
     fitter.importBinnedData(bkg,[POI], "data_b")

@@ -41,14 +41,25 @@ def getPoisson2(h, scale):
     return gRate
 
 def plot(MultiDimFit, fitDiagnosticsTest, cat, year, bins, finalstate, physics, mass, lifetime, order=3):
-    lumi={"2016":"", "2017":"", "2018":"58", "2022":"", "2023":"", "2024":""}
+    lumi_dict={
+        #recommendation for pre/postVFP values here: https://twiki.cern.ch/twiki/bin/view/CMS/PdmVDatasetsUL2016
+        "2016preVFP":19500,
+        "2016postVFP":16800,
+        "2016":19500+16800,
+        "2017":41480,
+        "2018":59830,
+        "Run2":137620,
+        "2022":34748,
+        "2023":27245,
+        "2024":59830,
+        "Run3":170857
+        }
     loop=0
     for j in range(2):
         tdrstyle.setTDRStyle()
         CMS_lumi.writeExtraText = True
-        CMS_lumi.extraText    = "Preliminary"
-
-        CMS_lumi.lumi_13TeV   = f"{year}, {lumi[year]} fb^{-1}"
+        CMS_lumi.extraText="Preliminary"
+        CMS_lumi.lumi_13TeV=f"{year}, {lumi_dict[year]/1000} fb^{-1}"
             
         ROOT.gStyle.SetEndErrorSize(2)
         f1 = ROOT.TFile(MultiDimFit)
