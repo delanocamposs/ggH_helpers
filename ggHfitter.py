@@ -17,9 +17,9 @@ def fitBKG(file, hist, output_name, order=3, POI="mass", verbose=False):
     output.cd()
     fitter.w.Write("w")
     output.Close()
-    print
     if verbose: 
         print("bkg chi-squared={}".format(chi2))
+    return
 
 def fitSIG(file, hist, output_name, POI="mass", verbose=False):
     f = ROOT.TFile(file)
@@ -37,5 +37,37 @@ def fitSIG(file, hist, output_name, POI="mass", verbose=False):
     output.cd()
     fitterS.w.Write("w")
     output.Close()
+    return 
 
+
+
+def fitSIGBKG(file, sighist, bkghist,output_name, order=3, POI="mass"):
+    f = ROOT.TFile(file)
+    signal = f.Get(sighist)
+    bkg = f.Get(bkghist)
+
+    fitterS = Fitter([POI])
+    fitterB = Fitter([POI])
+
+    fitterS.doubleCB('model_s',POI)
+    fitterB.bernstein('model_b',POI,order=order)
+    
+    fitterS.importBinnedData(signal,[POI], "data_s")
+    fitterB.importBinnedData(bkg,[POI], "data_b")
+
+    fitterB.setRange("lower", "mass", 70,110)
+    fitterB.setRange("upper", "mass", 140,180)
+
+    fitterB.fit("model_b","data_b",fitRange="lower,upper")
+    fitterS.fit("model_s","data_s")
+
+    chi2S = fitterS.projection("model_s","data_s",POI,filename=output_name)
+    chi2B = fitterB.projection("model_b","data_b",POI,filename=output_name)
+
+    output = ROOT.TFile(output_name, "UPDATE")
+    output.cd()
+    fitterS.w.Write("w")
+    fitterB.w.Write("w")
+    output.Close()
+    return
 
