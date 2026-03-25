@@ -52,12 +52,12 @@ def fitSIGBKG(file, sighist, bkghist,output_name, order, POI="mass"):
     fitter.importBinnedData(signal,[POI], "data_s")
     fitter.importBinnedData(bkg,[POI], "data_b")
 
-    fitter.fit("model_s","data_s")
+    s_fit_result=fitter.fit("model_s","data_s")
 
     fitter.setRange("lower", "mass", 70,110)
     fitter.setRange("upper", "mass", 140,180)
 
-    fitter.fit("model_b","data_b",fitRange="lower,upper")
+    b_fit_result=fitter.fit("model_b","data_b",fitRange="lower,upper")
 
     #chi2S = fitter.projection("model_s","data_s",POI,filename=output_name)
     #chi2B = fitter.projection("model_b","data_b",POI,filename=output_name)
@@ -66,5 +66,5 @@ def fitSIGBKG(file, sighist, bkghist,output_name, order, POI="mass"):
     output.cd()
     fitter.w.Write("w")
     output.Close()
-    return
+    return s_fit_result, b_fit_result
 

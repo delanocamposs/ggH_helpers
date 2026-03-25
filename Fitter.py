@@ -154,9 +154,10 @@ class Fitter(object):
 
     def fit(self, model="model", data="data", options=[], fitRange=None):
         opts = list(options)
+        opts.append(ROOT.RooFit.Save(True))
         if fitRange:
             opts.append(ROOT.RooFit.Range(fitRange))
-        self.w.pdf(model).fitTo(self.w.data(data), *opts)
+        return self.w.pdf(model).fitTo(self.w.data(data), *opts)
 
 
     def fetch(self,var):
@@ -181,16 +182,17 @@ class Fitter(object):
         self.w.factory("n1[2,0,20]")
         self.w.factory("alpha2[2,1,20]")
         self.w.factory("n2[2,0,20]")
-        self.w.factory(f"RooDoubleCB::{dcbname}({poi},mean,sigma,alpha1,n1,alpha2,n2)")
-
         cList = ROOT.RooArgList()
         for i in range(0,order):
             self.w.factory("c_"+str(i)+"[0,100]")
             cList.add(self.w.var("c_"+str(i)))
+
         bernsteinPDF = ROOT.RooBernsteinFast(order)(bname,bname,self.w.var(poi),cList)
+        doubleCB = ROOT.RooDoubleCB(dcbname,dcbname,self.w.var(poi),self.w.var("mean"),self.w.var("sigma"),self.w.var("alpha1"),self.w.var("n1"),self.w.var("alpha2"),self.w.var("n2"))
+        self.w.factory(f"SUM::{model_name}(nsig[0,0,10000]*{dcbname}, nbkg[100,0,100000]*{bname})")
 
         getattr(self.w,'import')(bernsteinPDF,ROOT.RooFit.Rename(bname))
-        getattr(self.w,'import')(doubleCB,ROOT.RooFit.Rename(name))
+        getattr(self.w,'import')(doubleCB,ROOT.RooFit.Rename(dcbname))
         return
 
 

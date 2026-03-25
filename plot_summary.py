@@ -1,13 +1,10 @@
-import ROOT 
-import numpy as np
+import ROOT
 import ggHfitter
-import os 
-import sys 
-import argparse, subprocess
-from ggHtools import define_weightMC
-from ggHcmsstyle import CMSstyle
-ROOT.gROOT.SetBatch(True)
-ROOT.ROOT.EnableImplicitMT()
+import argparse
+import subprocess
+import tdrstyle
+import CMS_lumi
+from ggHdatacardmaker import main
 
 def fetchError(q, n):
     l=0
@@ -16,25 +13,44 @@ def fetchError(q, n):
     u=ROOT.Math.chisquared_quantile_c(q, 2.0*n+2)/2.0
     return [l,u]
 
-def getPoissonGraph(h):
-    q = (1 - 0.6827) / 2.0
-    g = ROOT.TGraphAsymmErrors()
+def getPoisson(h):
+    q = (1-0.6827)/2.0
+    gRate = ROOT.TGraphAsymmErrors()
     n = 0
-    for i in range(1, h.GetNbinsX() + 1):
-        x  = h.GetBinCenter(i)
-        if 111<=x<=138:
-            continue
-        bw = h.GetBinWidth(i)
-        N  = h.GetBinContent(i)
-        lo, hi = fetchError(q, N)
-
-        g.SetPoint(n, x, N)
-        g.SetPointError(n, bw/2.0, bw/2.0, (N - lo), (hi - N))
-        n += 1
-    return g
+    for i in range(1, h.GetNbinsX()+1):
+        thresh = h.GetBinCenter(i)
+        N = h.GetBinContent(i)
+        gRate.SetPoint(n, thresh, N)
+        error = fetchError(q, N)
+        gRate.SetPointError(n, 0, 0, (N-error[0]), (error[1]-N))
+        n+=1
+    return gRate
 
 
-lumi_dict={
+def getPoisson2(h, scale):
+    q = (1-0.6827)/2.0
+    gRate = ROOT.TGraphAsymmErrors()
+    n = 0
+    for i in range(1, h.GetNbinsX()+1):
+        thresh = h.GetBinCenter(i)
+        N = h.GetBinContent(i)
+        #if N == 0:
+        #    continue
+        gRate.SetPoint(n, thresh, scale*N)
+        error = fetchError(q, N)
+        gRate.SetPointError(n, h.GetBinWidth(i)/2.0, h.GetBinWidth(i)/2.0, scale*(N-error[0]), scale*(error[1]-N))
+        n+=1
+    return gRate
+
+def save_histos(mass, year, ctau, hist1, hist2):
+    outfile=ROOT.TFile(f"sig_bkg_summary_histos_m{mass}_ct{ctau}_year{year}.root", "RECREATE")
+    hist1.GetValue().Write()
+    hist2.GetValue().Write()
+    outfile.Close()
+    return 
+
+def run(mass, ctau, year):
+    lumi_dict={
         #recommendation for pre/postVFP values here: https://twiki.cern.ch/twiki/bin/view/CMS/PdmVDatasetsUL2016
         "2016preVFP":19500,
         "2016postVFP":16800,
@@ -47,33 +63,19 @@ lumi_dict={
         "2024":59830,
         "Run3":170857
         }
+    tdrstyle.setTDRStyle()
+    CMS_lumi.writeExtraText = True
+    CMS_lumi.extraText="Preliminary"
+    CMS_lumi.lumi_13TeV=f"{year}, {lumi_dict[year]/1000} fb^{-1}"
+    ROOT.gStyle.SetEndErrorSize(2)
 
-sideband_SFs={
-    "2016preVFP":[0],
-    "2016postVFP":[0],
-    "2017":[55/33242],
-    "2018":[2069/30869]
-    }
-
-def save_histos(mass, year, ctau, hist1, hist2):
-    outfile=ROOT.TFile(f"sig_bkg_summary_histos_m{mass}_ct{ctau}_year{year}.root", "RECREATE")
-    hist1.GetValue().Write()
-    hist2.GetValue().Write()
-    outfile.Close()
-    return 
-
-
-def run(mass, ctau, year):
+    
     BR=1e-4
     scale_factor=1
     xsec=52.143
     cut_string=f"HLT_passed==1&&best_4g_phi1_dxy_m{mass}>-20&&best_4g_phi2_dxy_m{mass}>-20"
     preselection=f"(Photon_preselection[best_4g_idx1_m{mass}]==1)&&(Photon_preselection[best_4g_idx2_m{mass}]==1)&&(Photon_preselection[best_4g_idx3_m{mass}]==1)&&(Photon_preselection[best_4g_idx4_m{mass}]==1)"
     blind=f"((best_4g_corr_mass_m{mass}<110)||(best_4g_corr_mass_m{mass}>140))"
-    #blind=f"(best_4g_corr_mass_m{mass}<110)"
-    
-    
-    c=ROOT.TCanvas("", "", 800, 800)
     right=0.1
     left=0.14
     up=0.08
@@ -81,194 +83,261 @@ def run(mass, ctau, year):
     l=ROOT.TLegend(0.5+right-left,0.67+up-down, 0.95+right-left, 0.8+up-down)
     bins=[55, 70, 180]
     var=f"best_4g_corr_mass_m{mass}"
-    
-    #sig=f"ggH4g_M{mass}_ctau{ctau}_{year}_0_ggH4g_M{mass}_ctau{ctau}_{year}_ggH4g.root"
-    sig=f"ggH4g_M{mass}_ctau{ctau}_2018_0_ggH4g_M{mass}_ctau{ctau}_2018_ggH4g.root"
+    sig=f"ggH4g_M{mass}_ctau{ctau}_{year}_0_ggH4g_M{mass}_ctau{ctau}_{year}_ggH4g.root"
     bkg=f"EGamma_{year}_all_ggH4g.root"
-    
     sig_open=ROOT.TFile.Open(sig)
     sumw=0.0
     signal_df=ROOT.RDataFrame("ggH4g", sig)
+    data_ID_df=ROOT.RDataFrame("ggH4g", bkg)
     with sig_open as f:
         runs_tree = f.Get("Runs")
         for entry in runs_tree:
             sumw += entry.genEventSumw
     weight_formula = f"(genWeight / {sumw}) * {xsec} * {BR} * Pileup_weight"
     signal_df=signal_df.Define("event_weight", weight_formula)
-    
-    data_ID_df=ROOT.RDataFrame("ggH4g", bkg)
-    
     signal_df=signal_df.Filter(f"{cut_string}&&best_4g_ID_m{mass}==1&&{preselection}")
     data_ID_df=data_ID_df.Filter(f"{preselection}&&{cut_string}&&best_4g_ID_m{mass}==1&&{blind}")
-    
-    h_sig=signal_df.Histo1D(("signal_hist", f"signal_hist;{var};Events", bins[0], bins[1], bins[2]), f"best_4g_corr_mass_m{mass}", "event_weight")
-    h_sig.Scale(lumi_dict[year])
-    
+    h_sig=signal_df.Histo1D(("signal_hist", f"signal_hist;4#gamma mass;Events", bins[0], bins[1], bins[2]),f"{var}","event_weight")
     h_data=data_ID_df.Histo1D(("data_hist", f"data_hist;4#gamma mass;Events", bins[0], bins[1], bins[2]), f"{var}")
-    N_data_ID=h_data.Integral()
-    N_sig=h_sig.Integral()
-    
-    data_ID_color=ROOT.kOrange-3
-    signal_color=ROOT.kAzure-4
-    b_fit_clone=h_data.Clone("b_fit_clone")
-    b_fit_clone.SetLineWidth(4)
-    h_data.SetFillStyle(1001)
-    h_data.SetLineColor(ROOT.kBlack)
-    h_data.SetLineStyle(1)
-    h_data.SetFillColor(data_ID_color)
-    h_sig.SetFillStyle(1001)
-    h_sig.SetFillColor(signal_color)
-    h_sig.SetLineColor(ROOT.kBlack)
-    h_sig.SetLineStyle(1)
-    per_bin=round((bins[2]-bins[1])/bins[0], 2)
-
-    ROOT.gStyle.SetEndErrorSize(6)
-    data_ID_err = getPoissonGraph(h_data)
-    data_ID_err.SetLineColor(ROOT.kBlack)
-    data_ID_err.SetMarkerColor(ROOT.kBlack)
-    data_ID_err.SetMarkerStyle(20)
-    data_ID_err.SetMarkerSize(0.9)
-
-    
-    data_ID_clone=h_data.Clone("data_ID_clone")
-    h_sig_clone=h_sig.Clone("h_sig_clone")
-    h_sig_clone.SetFillColor(signal_color)
-    data_ID_clone.SetFillColor(data_ID_color)
-    data_ID_clone.SetFillStyle(1001)
-    h_sig_clone.SetFillStyle(1001)
-    data_ID_clone.SetLineColor(ROOT.kBlack)
-    b_fit_clone.SetLineColor(ROOT.kRed)
-    h_sig_clone.SetLineColor(ROOT.kBlack)
-    
-    h_data.SetLineColor(ROOT.kBlack)
-    h_sig.SetLineColor(ROOT.kBlack)
-    h_data.SetLineWidth(2)
-    h_sig.SetLineWidth(2)
-    ymax=100*max(h_data.GetMaximum(),h_sig.GetMaximum())
-    h_data.SetMaximum(20)
-    h_data.SetMinimum(0.01)
-
-    data_ID_points = h_data.Clone("data_ID_points")
-    data_ID_points.SetFillStyle(0)
-    data_ID_points.SetLineColor(ROOT.kBlack)
-    data_ID_points.SetMarkerColor(ROOT.kBlack)
-    data_ID_points.SetMarkerStyle(20)
-    data_ID_points.SetMarkerSize(0.9)
-
-    ax= h_data.GetXaxis()
-    blind_low=110.0
-    blind_high=140.0
-    first_bin = ax.FindFixBin(blind_low+1e-6)
-    last_bin=ax.FindFixBin(blind_high-1e-6)
-    x1=ax.GetBinLowEdge(first_bin)
-    x2=ax.GetBinLowEdge(last_bin)
-    y1=h_data.GetMinimum()
-    y2=h_data.GetMaximum()
-    line1 = ROOT.TLine(x1, y1, x1, y2)
-    line2 = ROOT.TLine(x2, y1, x2, y2)
-    for ln in (line1, line2):
-        ln.SetLineColor(ROOT.kBlack)
-        ln.SetLineWidth(2)
-        ln.SetLineStyle(2)
-
-    #c.SetLogy()
-    
+    h_sig.Scale(lumi_dict[year])
     save_histos(mass,year, ctau,h_data,h_sig)
-    c.cd()
-    ggHfitter.fitBKG(f"sig_bkg_summary_histos_m{mass}_ct{ctau}_year{year}.root", "data_hist", f"bkg_fit_result_m{mass}_ct{ctau}_year{year}.root", order=4)
-    ggHfitter.fitSIG(f"sig_bkg_summary_histos_m{mass}_ct{ctau}_year{year}.root", "signal_hist", f"sig_fit_result_m{mass}_ct{ctau}_year{year}.root")
-    sig_fit_file=ROOT.TFile.Open(f"sig_fit_result_m{mass}_ct{ctau}_year{year}.root")
-    wfitsig = sig_fit_file.Get("w")
-    xsig = wfitsig.var("mass")
-    pdfsig = wfitsig.pdf("model")
-    xmin = h_sig.GetXaxis().GetXmin()
-    xmax = h_sig.GetXaxis().GetXmax()
-    N_sig = h_sig.Integral()
-    binw = h_sig.GetXaxis().GetBinWidth(1)
-    def pdf_as_events(xx, pp):
-        xsig.setVal(xx[0])
-        return N_sig*binw*pdfsig.getVal(ROOT.RooArgSet(xsig))
-    sig_curve = ROOT.TF1("sig_curve_roofit", pdf_as_events, xmin, xmax, 0)
-    sig_curve.SetLineColor(ROOT.kRed)
-    sig_curve.SetLineWidth(2)
+    sresult, bresult=ggHfitter.fitSIGBKG(f"sig_bkg_summary_histos_m{mass}_ct{ctau}_year{year}.root", "signal_hist", "data_hist", f"SB_fit_result_m{mass}_ct{ctau}_year{year}.root", order=4)
+    SB_file=ROOT.TFile.Open(f"SB_fit_result_m{mass}_ct{ctau}_year{year}.root")
+    print("got here")
+    w = SB_file.Get("w")
+    x= w.var("mass")
+    s_model = w.pdf("model_s")
+    b_model = w.pdf("model_b")
 
-    bkg_fit_file=ROOT.TFile.Open(f"bkg_fit_result_m{mass}_ct{ctau}_year{year}.root")
-    wfitbkg = bkg_fit_file.Get("w")
-    xbkg = wfitbkg.var("mass")
-    pdfbkg = wfitbkg.pdf("model")
-    N_bkg=h_data.Integral()
-    def bkg_as_events(xx, pp):
-        xbkg.setVal(xx[0])
-        return N_bkg * binw * pdfbkg.getVal(ROOT.RooArgSet(xbkg))
-    xmin = h_data.GetXaxis().GetXmin()
-    xmax = h_data.GetXaxis().GetXmax()
-    binw = h_data.GetXaxis().GetBinWidth(1)
-    def pdf_as_events(xx, pp):
-        xbkg.setVal(xx[0])
-        return N_bkg*binw*pdfbkg.getVal(ROOT.RooArgSet(xbkg))
-    bkg_curve = ROOT.TF1("bkg_curve_roofit", pdf_as_events, xmin, xmax, 0)
-    bkg_curve.SetLineColor(ROOT.kRed)
-    bkg_curve.SetLineWidth(2)
-    def sig_plus_bkg(xx, pp):
-        xbkg.setVal(xx[0])
-        xsig.setVal(xx[0])
-        b = N_bkg * binw * pdfbkg.getVal(ROOT.RooArgSet(xbkg))
-        s = scale_factor*N_sig * binw * pdfsig.getVal(ROOT.RooArgSet(xsig))
-        return b + s        
-    splusb_curve = ROOT.TF1("splusb_curve", sig_plus_bkg, 110, 138, 0)
-    splusb_curve.SetLineColor(signal_color)
-    splusb_curve.SetLineWidth(3)
-    splusb_curve.SetLineStyle(2)
-    c.cd()
+    # Remove fitrange attributes so plotOn draws over the full range
+    s_model.removeStringAttribute("fitrange")
+    b_model.removeStringAttribute("fitrange")
 
+    # Get normalizations from data
+    bkg_norm = h_data.GetValue().Integral()
+    sig_norm = h_sig.GetValue().Integral()
 
-    n_points = 200
-    x_vals = np.linspace(110, 140, n_points)
-    shade = ROOT.TGraph(2 * n_points)
-    for i, x in enumerate(x_vals):
-        xbkg.setVal(x)
-        xsig.setVal(x)
-        b = N_bkg*binw*pdfbkg.getVal(ROOT.RooArgSet(xbkg))
-        s = scale_factor*N_sig*binw*pdfsig.getVal(ROOT.RooArgSet(xsig))
-        shade.SetPoint(i, x, b+s)
-    for i, x in enumerate(reversed(x_vals)):
-        xbkg.setVal(x)
-        b = N_bkg*binw*pdfbkg.getVal(ROOT.RooArgSet(xbkg))
-        shade.SetPoint(n_points+i, x, b)
-    shade.SetFillColor(ROOT.kAzure-4)
-    shade.SetFillStyle(1001)
-    shade.SetFillColorAlpha(ROOT.kAzure-4, 0.3)
-    shade.SetLineColor(0)
+    # Build the combined S+B model
+    n_sig = ROOT.RooRealVar("n_sig", "n_sig", sig_norm)
+    n_bkg = ROOT.RooRealVar("n_bkg", "n_bkg", bkg_norm)
+    sb_model = ROOT.RooAddPdf("model_sb", "S+B model",
+        ROOT.RooArgList(s_model, b_model),
+        ROOT.RooArgList(n_sig, n_bkg))
 
-    h_data.Draw("HIST")
-    data_ID_points.Draw("P, SAME")
-    #h_sig.Draw("HIST,SAME")
-    #sig_curve.Draw("SAME")
-    bkg_curve.Draw("SAME")
-    shade.Draw("F SAME")
-    splusb_curve.Draw("SAME")
-    line1.Draw("SAME")
-    line2.Draw("SAME")
-    data_ID_err.Draw("P E1 SAME") 
-    
-    ROOT.gPad.RedrawAxis()  
-    ROOT.gPad.RedrawAxis("g") 
-    
-    c.Update()
-    l.SetTextSize(0.05)
-    #CMSstyle(c, l,year, lumi_dict[year],[f"H #rightarrow #phi#phi #rightarrow 4#gamma", f"c#tau = {ctau} mm", f"m_{{#phi}} = {mass} #font[42]{{GeV}}", f"#font[42]{{BR}}(H #rightarrow #phi#phi)(#phi #rightarrow #gamma#gamma) = {BR}", f"#sigma = {xsec} #font[42]{{pb}}"])
-    CMSstyle(c, l,year, lumi_dict[year],[f"H #rightarrow #phi#phi #rightarrow 4#gamma", f"c#tau = {ctau} mm", f"m_{{#phi}} = {mass} #font[42]{{GeV}}"])
-    l.AddEntry(data_ID_clone, f"Blind {year} Data", "f")
-    if scale_factor!=1:
-        l.AddEntry(h_sig_clone, f"S+B fit (x{scale_factor})", "f")
+    #set the proportions and make it beautiful
+    can = ROOT.TCanvas("c")
+    pad1 = ROOT.TPad("pad1", "pad1", 0,   0.3, 1, 1.0)
+    pad1.SetTopMargin(0.08506945)
+    pad1.SetBottomMargin(0.00)  
+    pad1.SetLeftMargin(0.15)
+    pad1.SetRightMargin(0.05)
+    pad1.SetTickx(1)
+    pad1.SetTicky(1)
+    pad1.Draw()
+    pad2 = ROOT.TPad("pad2", "pad2", 0, 0.00, 1, 0.25)
+    pad2.SetTopMargin(0.05)
+    pad2.SetBottomMargin(0.35)
+    pad2.SetLeftMargin(0.15)
+    pad2.SetRightMargin(0.05)
+    pad2.SetTickx(1)
+    pad2.SetTicky(1)
+    pad2.Draw()
+    pad1.cd()
+    x.setBins(bins[0])
+    plot=x.frame()
+
+    #create data_obs as a TH1 obj so i can look through the contents and throw away the error bars (roofit fucks them up. i compute them manually later for the case of N=0 bins):
+    data_obs = w.data("data_b")
+    data_obs_binned = ROOT.RooDataHist("data_obs_binned", "binned data", ROOT.RooArgSet(x), data_obs)
+    data_obs_TH1 = data_obs_binned.createHistogram("mass")
+
+    cs=[]
+    cloned_data = data_obs_TH1.Clone("int_hist")
+    for i in range(1, cloned_data.GetNbinsX()+1):
+        count = cloned_data.GetBinContent(i)
+        cs.append(cloned_data.GetBinContent(i))
+        cloned_data.SetBinError(i, 0)
+    cloned_data_binned = ROOT.RooDataHist("data_obs_binned", "binned hist", ROOT.RooArgList(x), cloned_data)
+
+    #create points at the locations of the data bins with correct error bars from fetcError earlier in the code:
+    gres1=ROOT.TGraphAsymmErrors()
+    q = (1-0.6827)/2.0
+    bin_centers = [cloned_data.GetBinCenter(i) for i in range(1, cloned_data.GetNbinsX()+1)]
+    n_point = 0
+    for n in range(cloned_data.GetNbinsX()):
+        b_n = bin_centers[n]
+        # Skip bins in the blinded signal region
+        if 110 <= b_n <= 140:
+            continue
+        c_n = cs[n]
+        error=fetchError(q, c_n)
+        gres1.SetPoint(n_point, b_n, c_n)
+        gres1.SetPointError(n_point, 0.0, 0.0, (c_n-error[0]), (error[1]-c_n))
+        n_point += 1
+
+    gres1.SetLineColor(ROOT.kBlack)
+    gres1.SetMarkerColor(ROOT.kBlack)
+    gres1.SetMarkerStyle(20)
+
+    #plotting. the order here matters a lot in order to get the brazil plot colors to show up correctly and to get the data points on top of everything
+    # Plot data invisibly to set frame normalization and create "data_points" for residHist
+    cloned_data_binned.plotOn(plot,ROOT.RooFit.Binning(bins[0], bins[1], bins[2]),ROOT.RooFit.MarkerStyle(20),ROOT.RooFit.LineColor(ROOT.kBlack),ROOT.RooFit.Name("data_points"),ROOT.RooFit.XErrorSize(0),ROOT.RooFit.Invisible())
+
+    if data_obs_TH1.Integral()!=0:
+        n_data = data_obs_TH1.Integral()
+        print("data obs integral: ", n_data)
+        b_model.plotOn(plot,ROOT.RooFit.VisualizeError(bresult, 2, ROOT.kFALSE),ROOT.RooFit.FillColor(ROOT.kYellow),ROOT.RooFit.LineColor(ROOT.kBlack),ROOT.RooFit.Name("bkg_2sigma"),ROOT.RooFit.DrawOption("F"))
+        b_model.plotOn(plot,ROOT.RooFit.VisualizeError(bresult, 1, ROOT.kFALSE),ROOT.RooFit.FillColor(ROOT.kGreen),ROOT.RooFit.LineColor(ROOT.kBlack),ROOT.RooFit.Name("bkg_1sigma"),ROOT.RooFit.DrawOption("F"))
     else:
-        l.AddEntry(h_sig_clone, f"S+B fit", "f")
-    l.AddEntry(b_fit_clone, f"B only fit", "f")
-    l.Draw("SAME")
-    
-    c.Update()
-    c.SaveAs(f"summary_fit_plot{year}_ct{ctau}_m{mass}.png")
+        print("data is 0. ignoring uncertainty bands because uncertainties on fit parameters are unstable")
+        n_data = 0
 
+    norm_to_use = data_obs_TH1.Integral() if data_obs_TH1.Integral() != 0 else 1
+    b_model.plotOn(plot,ROOT.RooFit.LineColor(ROOT.kRed),ROOT.RooFit.LineStyle(2),ROOT.RooFit.Name("bkg_curve"),ROOT.RooFit.Normalization(norm_to_use, ROOT.RooAbsReal.NumEvent))
+    sb_model.plotOn(plot,ROOT.RooFit.LineColor(ROOT.kRed),ROOT.RooFit.Name("sb_curve"),ROOT.RooFit.Normalization(norm_to_use, ROOT.RooAbsReal.NumEvent))
+
+    integral_sb = sb_model.getVal(ROOT.RooArgSet(x))
+    print("norm after scaling sb: ", integral_sb)
+    integral_b = b_model.getVal(ROOT.RooArgSet(x))
+    print("norm after scaling b: ", integral_b)
+
+    y_ax_val=round((bins[2]-bins[1])/(bins[0]),2)
+    plot.GetYaxis().SetTitle(f"Events/{y_ax_val} (GeV)")
+    plot.GetXaxis().SetLabelSize(0)    
+    plot.GetXaxis().SetTitleSize(0)
+    plot.GetYaxis().SetTitleOffset(0.65)
+
+    if cs:
+        max_y = max(cs[n]+(fetchError(q,cs[n])[1]-cs[n]) for n in range(len(cs)))
+        plot.SetMaximum(2.0*max_y)
+    else:
+        plot.SetMaximum(10) 
+    plot.Draw()
+
+    #legend and contents to draw on the canvas
+    leg = ROOT.TLegend(0.2, 0.5, 0.68, 0.88)
+    cate = ROOT.TLatex()
+    cate.SetTextSize(0.06)
+    cate.DrawLatexNDC(0.55, 0.84, rf"c#tau = {ctau} mm, m_{{#phi}} = {mass} GeV")
+    cate.DrawLatexNDC(0.55, 0.78, f"{year}")
+    leg.AddEntry("data_points","Blinded Data", "p")
+    leg.AddEntry("sb_curve","S+B fit sum", "L")
+    leg.AddEntry("bkg_curve", "B component", "L")
+    if data_obs_TH1.Integral()!=0:
+        leg.AddEntry("bkg_1sigma",r"\pm 1 \sigma", "f")
+        leg.AddEntry("bkg_2sigma",r"\pm 2 \sigma", "f")
+    else: 
+        print("")
+    leg.SetHeader("H #rightarrow #phi#phi #rightarrow 4#gamma")
+    leg.SetBorderSize(0)
+    leg.SetFillStyle(0)
+    leg.Draw("SAME")
+    gres1.Draw("p, same")
+
+    #define the signal-only curve (S+B minus B = S) for the bottom panel, scaled to expected event counts
+    n_sig_bottom = ROOT.RooRealVar("n_sig_bottom", "n_sig_bottom", sig_norm)
+    s_only_curve = ROOT.RooAddPdf("s_only_curve", "signal only",
+        ROOT.RooArgList(s_model),
+        ROOT.RooArgList(n_sig_bottom))
+
+    #cd into bottom panel and begin populating it with s-b curve and datapoints
+    pad2.cd()
+    resid_hist = plot.residHist("data_points", "bkg_curve")
+    nres  = resid_hist.GetN()
+    xs = resid_hist.GetX()
+    ys = resid_hist.GetY()
+    x_vals = [xs[i] for i in range(nres)]
+    y_vals = [ys[i] for i in range(nres)]
+
+    #define the residual data points and set errors/locations manually
+    g_res=ROOT.TGraphAsymmErrors()
+    q = (1-0.6827)/2.0
+    n_res_point = 0
+    for n in range(nres):
+        x_n=xs[n]
+        y_n=ys[n]
+        # Skip bins in the blinded signal region
+        if 110 <= x_n <= 140:
+            continue
+        c_n = cs[n]
+        g_res.SetPoint(n_res_point, x_n, y_n)
+        error=fetchError(q, c_n)
+        g_res.SetPointError(n_res_point, 0.0, 0.0, (c_n-error[0]), (error[1]-c_n))
+        n_res_point += 1
+    g_res.SetMarkerStyle(20)
+    g_res.SetMarkerColor(ROOT.kBlack)
+    g_res.SetLineColor(ROOT.kBlack)
+
+    #fill axis titles on the bottom panel and write on the canvas
+    x.setRange(bins[1], bins[2])
+    x.setBins(bins[0])
+    lower_plot = x.frame(ROOT.RooFit.Range(bins[1], bins[2]))
+    lower_plot.GetXaxis().SetTitle("mass(4#gamma) [GeV]")
+    lower_plot.GetYaxis().SetTitle("")
+    lower_plot.GetXaxis().SetLabelSize(0.09)
+    lower_plot.GetYaxis().SetLabelSize(0.07)
+    lower_plot.GetXaxis().SetTitleSize(0.12)
+    lower_plot.GetYaxis().SetTitleSize(0.10)
+    lower_plot.GetXaxis().SetTitleOffset(1.1)
+    lower_plot.GetYaxis().SetTitleOffset(0.5)
+    lower_plot.GetYaxis().SetNdivisions(505)
+
+    #dynamic y axis scaling
+    n_points = g_res.GetN()
+    if n_points > 0:
+        ymin = float("inf")
+        ymax = float("-inf")
+        for i in range(n_points):
+            y = g_res.GetY()[i]
+            y_err_low = g_res.GetErrorYlow(i)
+            y_err_high = g_res.GetErrorYhigh(i)
+            ymin = min(ymin, y-y_err_low)
+            ymax = max(ymax, y+y_err_high)
+
+        y_range = ymax-ymin
+        margin = 0.3*y_range if y_range>0 else 1.0
+        lower_plot.SetMinimum(ymin-margin)
+        lower_plot.SetMaximum(ymax+margin)
+    else:
+        lower_plot.SetMinimum(-2)
+        lower_plot.SetMaximum(2)
+
+    s_only_curve.plotOn(lower_plot, ROOT.RooFit.LineColor(2), ROOT.RooFit.Name("sb") )
+
+    # Reset axis titles after plotOn (RooFit overwrites them)
+    lower_plot.GetYaxis().SetTitle("")
+    lower_plot.SetTitle("")
+
+    n_bins =bins[0]
+    x_min=bins[1]
+    x_max=bins[2]
+
+    dx=(x_max-x_min)/n_bins
+    g_bzb = ROOT.TGraph(n_bins)
+
+    for i in range(n_bins):
+        x_center=x_min+(i+0.5)*dx
+        g_bzb.SetPoint(i, x_center, 0.0)
+
+    lower_plot.Draw("axis")
+    lower_plot.SetTitle("") 
+    g_bzb.SetLineColor(ROOT.kRed)
+    g_bzb.SetLineStyle(2)
+    g_bzb.SetLineWidth(2)
+    g_res.Draw("P") 
+    g_bzb.Draw("L")
+
+    leg2 = ROOT.TLegend(0.15, 0.8, 0.68, 0.95)
+    leg2.SetHeader("B component subtracted")
+    leg2.SetBorderSize(0)
+    leg2.SetFillStyle(0)
+    leg2.Draw("Same")
+    pad1.cd()
+    can.Update()
+    can.cd()
+    can.Update()
+    can.SaveAs(f"summary_plot_m{mass}_ct{ctau}_{year}.png")
+    can.SaveAs(f"summary_plot_m{mass}_ct{ctau}_{year}.pdf")
 
 if __name__=="__main__":
     parser = argparse.ArgumentParser("Running sideband plot")
@@ -280,4 +349,3 @@ if __name__=="__main__":
     lifetime=args.ctau
     year=args.year
     run(mass, lifetime, year)
-
