@@ -83,24 +83,55 @@ def run(mass, ctau, year):
     l=ROOT.TLegend(0.5+right-left,0.67+up-down, 0.95+right-left, 0.8+up-down)
     bins=[55, 70, 180]
     var=f"best_4g_corr_mass_m{mass}"
-    sig=f"ggH4g_M{mass}_ctau{ctau}_{year}_0_ggH4g_M{mass}_ctau{ctau}_{year}_ggH4g.root"
+
+    # Determine which years to process
+    run2_years = ["2016preVFP", "2016postVFP", "2017", "2018"]
+    if year == "Run2":
+        years_to_process = run2_years
+    else:
+        years_to_process = [year]
+
+    # Build data histogram
     bkg=f"EGamma_{year}_all_ggH4g.root"
-    sig_open=ROOT.TFile.Open(sig)
-    sumw=0.0
-    signal_df=ROOT.RDataFrame("ggH4g", sig)
     data_ID_df=ROOT.RDataFrame("ggH4g", bkg)
-    with sig_open as f:
-        runs_tree = f.Get("Runs")
-        for entry in runs_tree:
-            sumw += entry.genEventSumw
-    weight_formula = f"(genWeight / {sumw}) * {xsec} * {BR} * Pileup_weight"
-    signal_df=signal_df.Define("event_weight", weight_formula)
-    signal_df=signal_df.Filter(f"{cut_string}&&best_4g_ID_m{mass}==1&&{preselection}")
     data_ID_df=data_ID_df.Filter(f"{preselection}&&{cut_string}&&best_4g_ID_m{mass}==1&&{blind}")
-    h_sig=signal_df.Histo1D(("signal_hist", f"signal_hist;4#gamma mass;Events", bins[0], bins[1], bins[2]),f"{var}","event_weight")
     h_data=data_ID_df.Histo1D(("data_hist", f"data_hist;4#gamma mass;Events", bins[0], bins[1], bins[2]), f"{var}")
-    h_sig.Scale(lumi_dict[year])
-    save_histos(mass,year, ctau,h_data,h_sig)
+
+    # Build signal histogram: process each year separately and add
+    h_sig_total = None
+    for y in years_to_process:
+        sig_y = f"ggH4g_M{mass}_ctau{ctau}_{y}_0_ggH4g_M{mass}_ctau{ctau}_{y}_ggH4g.root"
+        sig_open_y = ROOT.TFile.Open(sig_y)
+        sumw_y = 0.0
+        with sig_open_y as f:
+            runs_tree = f.Get("Runs")
+            for entry in runs_tree:
+                sumw_y += entry.genEventSumw
+        signal_df_y = ROOT.RDataFrame("ggH4g", sig_y)
+        weight_y = f"(genWeight / {sumw_y}) * {xsec} * {BR} * Pileup_weight"
+        signal_df_y = signal_df_y.Define("event_weight", weight_y)
+        signal_df_y = signal_df_y.Filter(f"{cut_string}&&best_4g_ID_m{mass}==1&&{preselection}")
+        h_y = signal_df_y.Histo1D((f"sig_tmp_{y}", f"sig_tmp_{y}", bins[0], bins[1], bins[2]), var, "event_weight")
+        h_y_clone = h_y.GetValue().Clone(f"sig_scaled_{y}")
+        h_y_clone.Scale(lumi_dict[y])
+        if h_sig_total is None:
+            h_sig_total = h_y_clone.Clone("signal_hist")
+        else:
+            h_sig_total.Add(h_y_clone)
+
+    # Wrap in a proxy object that mimics the GetValue()/Scale() interface used by save_histos
+    class HistProxy:
+        def __init__(self, h):
+            self._h = h
+        def GetValue(self):
+            return self._h
+        def Scale(self, s):
+            self._h.Scale(s)
+        def Integral(self):
+            return self._h.Integral()
+    h_sig = HistProxy(h_sig_total)
+
+    save_histos(mass, year, ctau, h_data, h_sig)
     sresult, bresult=ggHfitter.fitSIGBKG(f"sig_bkg_summary_histos_m{mass}_ct{ctau}_year{year}.root", "signal_hist", "data_hist", f"SB_fit_result_m{mass}_ct{ctau}_year{year}.root", order=4)
     SB_file=ROOT.TFile.Open(f"SB_fit_result_m{mass}_ct{ctau}_year{year}.root")
     print("got here")
@@ -234,11 +265,20 @@ def run(mass, ctau, year):
     leg.Draw("SAME")
     gres1.Draw("p, same")
 
-    #define the signal-only curve (S+B minus B = S) for the bottom panel, scaled to expected event counts
-    n_sig_bottom = ROOT.RooRealVar("n_sig_bottom", "n_sig_bottom", sig_norm)
-    s_only_curve = ROOT.RooAddPdf("s_only_curve", "signal only",
-        ROOT.RooArgList(s_model),
-        ROOT.RooArgList(n_sig_bottom))
+    #build the signal-only curve for the bottom panel by subtracting the B curve from the S+B curve on the upper panel
+    #this guarantees the bottom panel signal shape matches what's shown on top
+    sb_curve_obj = plot.getCurve("sb_curve")
+    b_curve_obj = plot.getCurve("bkg_curve")
+
+    n_curve_points = sb_curve_obj.GetN()
+    g_sig_only = ROOT.TGraph(n_curve_points)
+    for i in range(n_curve_points):
+        x_i = sb_curve_obj.GetX()[i]
+        y_sb = sb_curve_obj.GetY()[i]
+        y_b = b_curve_obj.interpolate(x_i)
+        g_sig_only.SetPoint(i, x_i, y_sb - y_b)
+    g_sig_only.SetLineColor(ROOT.kRed)
+    g_sig_only.SetLineWidth(2)
 
     #cd into bottom panel and begin populating it with s-b curve and datapoints
     pad2.cd()
@@ -302,9 +342,7 @@ def run(mass, ctau, year):
         lower_plot.SetMinimum(-2)
         lower_plot.SetMaximum(2)
 
-    s_only_curve.plotOn(lower_plot, ROOT.RooFit.LineColor(2), ROOT.RooFit.Name("sb") )
-
-    # Reset axis titles after plotOn (RooFit overwrites them)
+    lower_plot.Draw("axis")
     lower_plot.GetYaxis().SetTitle("")
     lower_plot.SetTitle("")
 
@@ -319,13 +357,12 @@ def run(mass, ctau, year):
         x_center=x_min+(i+0.5)*dx
         g_bzb.SetPoint(i, x_center, 0.0)
 
-    lower_plot.Draw("axis")
-    lower_plot.SetTitle("") 
     g_bzb.SetLineColor(ROOT.kRed)
     g_bzb.SetLineStyle(2)
     g_bzb.SetLineWidth(2)
-    g_res.Draw("P") 
     g_bzb.Draw("L")
+    g_sig_only.Draw("L same")
+    g_res.Draw("P")
 
     leg2 = ROOT.TLegend(0.15, 0.8, 0.68, 0.95)
     leg2.SetHeader("B component subtracted")
