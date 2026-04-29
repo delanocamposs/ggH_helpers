@@ -5,6 +5,7 @@ import subprocess
 import tdrstyle
 import CMS_lumi
 from ggHdatacardmaker import main
+ROOT.gROOT.SetBatch(True)
 
 def fetchError(q, n):
     l=0
@@ -58,9 +59,13 @@ def run(mass, ctau, year):
         "2017":41480,
         "2018":59830,
         "Run2":137620,
-        "2022":34748,
-        "2023":27245,
-        "2024":59830,
+        "2022preEE":7990,
+        "2022postEE":26680,
+        "2022":7990+26680,
+        "2023preBPix":17960,
+        "2023postBPix":9680,
+        "2023":17960+9680,
+        "2024":109820,
         "Run3":170857
         }
     tdrstyle.setTDRStyle()
@@ -81,26 +86,36 @@ def run(mass, ctau, year):
     up=0.08
     down=0
     l=ROOT.TLegend(0.5+right-left,0.67+up-down, 0.95+right-left, 0.8+up-down)
-    bins=[55, 70, 180]
+    bins=[110, 70, 180]
     var=f"best_4g_corr_mass_m{mass}"
 
-    # Determine which years to process
     run2_years = ["2016preVFP", "2016postVFP", "2017", "2018"]
+    run3_years = ["2022preEE", "2022postEE", "2023preBPix","2023postBPix", "2024"]
+    years_2016 = ["2016preVFP", "2016postVFP"]
+    years_2022 = ["2022preEE", "2022postEE"]
+    years_2023 = ["2023preBPix", "2023postBPix"]
     if year == "Run2":
         years_to_process = run2_years
+    elif year == "Run3":
+        years_to_process = run3_years
+    elif year == "2016":
+        years_to_process = years_2016
+    elif year == "2022":
+        years_to_process = years_2022
+    elif year == "2023":
+        years_to_process = years_2023
     else:
         years_to_process = [year]
 
-    # Build data histogram
-    bkg=f"EGamma_{year}_all_ggH4g.root"
+    bkg=f"/eos/uscms/store/user/dacampos/analysis/data/EGamma_{year}_updated/EGamma_{year}_all_ggH4g.root"
     data_ID_df=ROOT.RDataFrame("ggH4g", bkg)
     data_ID_df=data_ID_df.Filter(f"{preselection}&&{cut_string}&&best_4g_ID_m{mass}==1&&{blind}")
     h_data=data_ID_df.Histo1D(("data_hist", f"data_hist;4#gamma mass;Events", bins[0], bins[1], bins[2]), f"{var}")
 
-    # Build signal histogram: process each year separately and add
+    #signal histogram built separately for each year.
     h_sig_total = None
     for y in years_to_process:
-        sig_y = f"ggH4g_M{mass}_ctau{ctau}_{y}_0_ggH4g_M{mass}_ctau{ctau}_{y}_ggH4g.root"
+        sig_y = f"/eos/uscms/store/user/dacampos/analysis/signal/ggH4g_M{mass}_ctau{ctau}_{y}_0_ggH4g_M{mass}_ctau{ctau}_{y}_ggH4g.root"
         sig_open_y = ROOT.TFile.Open(sig_y)
         sumw_y = 0.0
         with sig_open_y as f:
@@ -119,7 +134,6 @@ def run(mass, ctau, year):
         else:
             h_sig_total.Add(h_y_clone)
 
-    # Wrap in a proxy object that mimics the GetValue()/Scale() interface used by save_histos
     class HistProxy:
         def __init__(self, h):
             self._h = h
@@ -375,6 +389,14 @@ def run(mass, ctau, year):
     can.Update()
     can.SaveAs(f"summary_plot_m{mass}_ct{ctau}_{year}.png")
     can.SaveAs(f"summary_plot_m{mass}_ct{ctau}_{year}.pdf")
+    
+    can.Close()
+    SB_file.Close()
+    del can, pad1, pad2, plot, lower_plot
+    del w, x, s_model, b_model, sb_model
+    del bresult, sresult
+    ROOT.gROOT.GetListOfCanvases().Clear()
+    ROOT.gROOT.GetListOfFiles().Clear()
 
 if __name__=="__main__":
     parser = argparse.ArgumentParser("Running sideband plot")
