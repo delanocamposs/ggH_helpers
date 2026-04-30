@@ -86,7 +86,9 @@ def run(mass, ctau, year):
     up=0.08
     down=0
     l=ROOT.TLegend(0.5+right-left,0.67+up-down, 0.95+right-left, 0.8+up-down)
-    bins=[110, 70, 180]
+    bins_sig = [180, 80, 170]
+    bins_data = [45, 80, 170]
+    bins=bins_data
     var=f"best_4g_corr_mass_m{mass}"
 
     run2_years = ["2016preVFP", "2016postVFP", "2017", "2018"]
@@ -110,7 +112,7 @@ def run(mass, ctau, year):
     bkg=f"/eos/uscms/store/user/dacampos/analysis/data/EGamma_{year}_updated/EGamma_{year}_all_ggH4g.root"
     data_ID_df=ROOT.RDataFrame("ggH4g", bkg)
     data_ID_df=data_ID_df.Filter(f"{preselection}&&{cut_string}&&best_4g_ID_m{mass}==1&&{blind}")
-    h_data=data_ID_df.Histo1D(("data_hist", f"data_hist;4#gamma mass;Events", bins[0], bins[1], bins[2]), f"{var}")
+    h_data=data_ID_df.Histo1D(("data_hist", f"data_hist;4#gamma mass;Events", bins_data[0], bins_data[1], bins_data[2]), f"{var}")
 
     #signal histogram built separately for each year.
     h_sig_total = None
@@ -126,7 +128,7 @@ def run(mass, ctau, year):
         weight_y = f"(genWeight / {sumw_y}) * {xsec} * {BR} * Pileup_weight"
         signal_df_y = signal_df_y.Define("event_weight", weight_y)
         signal_df_y = signal_df_y.Filter(f"{cut_string}&&best_4g_ID_m{mass}==1&&{preselection}")
-        h_y = signal_df_y.Histo1D((f"sig_tmp_{y}", f"sig_tmp_{y}", bins[0], bins[1], bins[2]), var, "event_weight")
+        h_y = signal_df_y.Histo1D((f"sig_tmp_{y}", f"sig_tmp_{y}", bins_sig[0], bins_sig[1], bins_sig[2]), var, "event_weight")
         h_y_clone = h_y.GetValue().Clone(f"sig_scaled_{y}")
         h_y_clone.Scale(lumi_dict[y])
         if h_sig_total is None:

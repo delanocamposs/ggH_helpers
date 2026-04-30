@@ -7,8 +7,8 @@ def fitBKG(file, hist, output_name, order=3, POI="mass", verbose=False):
     bkg = f.Get(hist)
     #fit the background with a Berntsein Polynomial of order 3 
     fitter = Fitter([POI])
-    fitter.setRange("lower", "mass", 70,110)
-    fitter.setRange("upper", "mass", 140,180)
+    fitter.setRange("lower", "mass", 80,110)
+    fitter.setRange("upper", "mass", 140,170)
     fitter.bernstein('model',POI,order=order)
     fitter.importBinnedData(bkg,[POI])
     fitter.fit("model","data",fitRange="lower,upper")
@@ -29,7 +29,7 @@ def fitSIG(file, hist, output_name, POI="mass", verbose=False):
     fitterS.doubleCB('model',POI)
     fitterS.importBinnedData(signal,[POI],name = "data")
     #fit twice
-    fitterS.fit("model","data")
+    fitterS.fit("model","data", sumW2=True)
     chi2 = fitterS.projection("model","data",POI,filename=output_name)
     if verbose:
         print("signal chi-squared={}".format(chi2))
@@ -52,12 +52,13 @@ def fitSIGBKG(file, sighist, bkghist,output_name, order, POI="mass"):
     fitter.importBinnedData(signal,[POI], "data_s")
     fitter.importBinnedData(bkg,[POI], "data_b")
 
-    s_fit_result=fitter.fit("model_s","data_s")
+    fitter.setRange("signal_window", "mass", 120, 130)
+    s_fit_result=fitter.fit("model_s","data_s", sumW2=True, fitRange="signal_window")
 
-    fitter.setRange("lower", "mass", 70,110)
-    fitter.setRange("upper", "mass", 140,180)
+    fitter.setRange("lower", "mass", 80,110)
+    fitter.setRange("upper", "mass", 140,170)
 
-    b_fit_result=fitter.fit("model_b","data_b",fitRange="lower,upper")
+    b_fit_result=fitter.fit("model_b","data_b",fitRange="lower,upper", sumW2=False)
 
     #chi2S = fitter.projection("model_s","data_s",POI,filename=output_name)
     #chi2B = fitter.projection("model_b","data_b",POI,filename=output_name)
