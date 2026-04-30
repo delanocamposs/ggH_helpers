@@ -30,7 +30,7 @@ class Fitter(object):
             self.w.factory("c_"+str(i)+"[0,100]")
             cList.add(self.w.var("c_"+str(i)))
         bernsteinPDF = ROOT.RooBernsteinFast(order)(name,name,self.w.var(poi),cList)
-        getattr(self.w,'import')(bernsteinPDF,ROOT.RooFit.Rename(name))
+        getattr(self.w,'import')(bernsteinPDF)
 
 
     def bernsteinPlusGaus(self,name = 'model',poi='x',order=1):
@@ -56,24 +56,20 @@ class Fitter(object):
 
     def doubleCB(self,name = 'model',poi='x'):
         ROOT.gSystem.Load("libHiggsAnalysisCombinedLimit")
-
         self.w.factory("mean[125,120,130]")
-        self.w.factory("sigma[2,0,20]")
+        self.w.factory("sigma[2,0.1,20]")
         self.w.factory("alpha1[2,1,20]")
-        self.w.factory("n1[2,0,20]")
+        self.w.factory("n1[2,1,50]")
         self.w.factory("alpha2[2,1,20]")
-        self.w.factory("n2[2,0,20]")
-
+        self.w.factory("n2[2,1,50]")
         doubleCB = ROOT.RooDoubleCB(name,name,self.w.var(poi),self.w.var("mean"),self.w.var("sigma"),self.w.var("alpha1"),self.w.var("n1"),self.w.var("alpha2"),self.w.var("n2"))
-        getattr(self.w,'import')(doubleCB,ROOT.RooFit.Rename(name))
+        getattr(self.w,'import')(doubleCB)
 
     def backgroundFast(self):
         ROOT.gSystem.Load("libHiggsAnalysisCombinedLimit")
 
         self.w.factory("M[1000,20000]")
         self.w.factory("m[25,175]")
-
-
 
         self.w.factory("alpha_0[7,0,100]")
         self.w.factory("alpha_1[0,-0.1,0.1]")
@@ -152,11 +148,15 @@ class Fitter(object):
             
 
 
-    def fit(self, model="model", data="data", options=[], fitRange=None):
+    def fit(self, model="model", data="data", options=[], fitRange=None, sumW2=False):
         opts = list(options)
         opts.append(ROOT.RooFit.Save(True))
+        opts.append(ROOT.RooFit.PrintLevel(-1))
+        opts.append(ROOT.RooFit.Verbose(False))
         if fitRange:
             opts.append(ROOT.RooFit.Range(fitRange))
+        if sumW2:
+            opts.append(ROOT.RooFit.SumW2Error(True))
         return self.w.pdf(model).fitTo(self.w.data(data), *opts)
 
 
@@ -177,11 +177,11 @@ class Fitter(object):
     def DCBandBernstein(self, order, dcbname="s_model", bname="b_model", poi="x", model_name="sb_model"):
         ROOT.gSystem.Load("libHiggsAnalysisCombinedLimit")
         self.w.factory("mean[125,120,130]")
-        self.w.factory("sigma[2,0,20]")
+        self.w.factory("sigma[2,0.1,20]")
         self.w.factory("alpha1[2,1,20]")
-        self.w.factory("n1[2,0,20]")
+        self.w.factory("n1[2,1,50]")
         self.w.factory("alpha2[2,1,20]")
-        self.w.factory("n2[2,0,20]")
+        self.w.factory("n2[2,1,50]")
         cList = ROOT.RooArgList()
         for i in range(0,order):
             self.w.factory("c_"+str(i)+"[0,100]")
@@ -189,10 +189,9 @@ class Fitter(object):
 
         bernsteinPDF = ROOT.RooBernsteinFast(order)(bname,bname,self.w.var(poi),cList)
         doubleCB = ROOT.RooDoubleCB(dcbname,dcbname,self.w.var(poi),self.w.var("mean"),self.w.var("sigma"),self.w.var("alpha1"),self.w.var("n1"),self.w.var("alpha2"),self.w.var("n2"))
+        getattr(self.w,'import')(bernsteinPDF)
+        getattr(self.w,'import')(doubleCB)
         self.w.factory(f"SUM::{model_name}(nsig[0,0,10000]*{dcbname}, nbkg[100,0,100000]*{bname})")
-
-        getattr(self.w,'import')(bernsteinPDF,ROOT.RooFit.Rename(bname))
-        getattr(self.w,'import')(doubleCB,ROOT.RooFit.Rename(dcbname))
         return
 
 
