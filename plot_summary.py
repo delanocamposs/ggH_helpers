@@ -86,7 +86,7 @@ def run(mass, ctau, year):
     up=0.08
     down=0
     l=ROOT.TLegend(0.5+right-left,0.67+up-down, 0.95+right-left, 0.8+up-down)
-    bins_sig = [180, 80, 170]
+    bins_sig = [45, 80, 170]
     bins_data = [45, 80, 170]
     bins=bins_data
     var=f"best_4g_corr_mass_m{mass}"
@@ -128,6 +128,16 @@ def run(mass, ctau, year):
         weight_y = f"(genWeight / {sumw_y}) * {xsec} * {BR} * Pileup_weight"
         signal_df_y = signal_df_y.Define("event_weight", weight_y)
         signal_df_y = signal_df_y.Filter(f"{cut_string}&&best_4g_ID_m{mass}==1&&{preselection}")
+        # --- diagnostic: is the 125 spike driven by outlier event weights? ---
+        core = signal_df_y.Filter(f"abs({var}-125.0)<0.25")
+        print(f"[{y}] max event_weight: all={signal_df_y.Max('event_weight').GetValue():.4f} "
+              f"core={core.Max('event_weight').GetValue():.4f}")
+        print(f"[{y}] max Pileup_weight core={core.Max('Pileup_weight').GetValue():.3f} "
+              f"max genWeight core={core.Max('genWeight').GetValue():.3f}")
+        core.Display(["event_weight", "genWeight", "Pileup_weight", var], 8).Print()
+        print(f"[{y}] max Pileup_weight ALL = {signal_df_y.Max('Pileup_weight').GetValue():.1f}")
+        signal_df_y.Filter("event_weight > 1e-4").Display(["event_weight", "Pileup_weight", var], 10).Print()
+        # --- end diagnostic ---
         h_y = signal_df_y.Histo1D((f"sig_tmp_{y}", f"sig_tmp_{y}", bins_sig[0], bins_sig[1], bins_sig[2]), var, "event_weight")
         h_y_clone = h_y.GetValue().Clone(f"sig_scaled_{y}")
         h_y_clone.Scale(lumi_dict[y])
@@ -135,6 +145,12 @@ def run(mass, ctau, year):
             h_sig_total = h_y_clone.Clone("signal_hist")
         else:
             h_sig_total.Add(h_y_clone)
+    nonzero = sum(1 for i in range(1, h_sig_total.GetNbinsX()+1) if h_sig_total.GetBinContent(i) > 0)
+    print(f"signal nonzero bins={nonzero}, integral={h_sig_total.Integral():.3f}")
+    imax = max(range(1, h_sig_total.GetNbinsX()+1), key=lambda i: h_sig_total.GetBinContent(i))
+    print(f"peak bin center={h_sig_total.GetBinCenter(imax):.2f} content={h_sig_total.GetBinContent(imax):.3f}")
+    lo = h_sig_total.FindBin(120); hi = h_sig_total.FindBin(130)
+    print(f"integral in 120-130={h_sig_total.Integral(lo, hi):.3f} of total {h_sig_total.Integral():.3f}")
 
     class HistProxy:
         def __init__(self, h):
@@ -147,6 +163,7 @@ def run(mass, ctau, year):
             return self._h.Integral()
     h_sig = HistProxy(h_sig_total)
 
+    print(f"signal effective entries={h_sig_total.GetEffectiveEntries():.2f} raw entries={h_sig_total.GetEntries():.0f}")
     save_histos(mass, year, ctau, h_data, h_sig)
     sresult, bresult=ggHfitter.fitSIGBKG(f"sig_bkg_summary_histos_m{mass}_ct{ctau}_year{year}.root", "signal_hist", "data_hist", f"SB_fit_result_m{mass}_ct{ctau}_year{year}.root", order=4)
     SB_file=ROOT.TFile.Open(f"SB_fit_result_m{mass}_ct{ctau}_year{year}.root")

@@ -29,7 +29,8 @@ def fitSIG(file, hist, output_name, POI="mass", verbose=False):
     fitterS.doubleCB('model',POI)
     fitterS.importBinnedData(signal,[POI],name = "data")
     #fit twice
-    fitterS.fit("model","data", sumW2=True)
+    fitterS.setRange("signal_window", "mass", 110, 140)
+    fitterS.fit("model","data", sumW2=True, fitRange="signal_window")
     chi2 = fitterS.projection("model","data",POI,filename=output_name)
     if verbose:
         print("signal chi-squared={}".format(chi2))
@@ -52,8 +53,11 @@ def fitSIGBKG(file, sighist, bkghist,output_name, order, POI="mass"):
     fitter.importBinnedData(signal,[POI], "data_s")
     fitter.importBinnedData(bkg,[POI], "data_b")
 
-    fitter.setRange("signal_window", "mass", 120, 130)
+    fitter.setRange("signal_window", "mass", 110, 140)
     s_fit_result=fitter.fit("model_s","data_s", sumW2=True, fitRange="signal_window")
+    print(f"[SIG fit] status={s_fit_result.status()} covQual={s_fit_result.covQual()} "
+      f"sigma={fitter.w.var('sigma').getVal():.3f} +/- {fitter.w.var('sigma').getError():.3f} "
+      f"mean={fitter.w.var('mean').getVal():.3f}")
 
     fitter.setRange("lower", "mass", 80,110)
     fitter.setRange("upper", "mass", 140,170)
