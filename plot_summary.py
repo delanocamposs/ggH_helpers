@@ -127,8 +127,7 @@ def run(mass, ctau, year):
         signal_df_y = ROOT.RDataFrame("ggH4g", sig_y)
         weight_y = f"(genWeight / {sumw_y}) * {xsec} * {BR} * Pileup_weight"
         signal_df_y = signal_df_y.Define("event_weight", weight_y)
-        signal_df_y = signal_df_y.Filter(f"{cut_string}&&best_4g_ID_m{mass}==1&&{preselection}")
-        # --- diagnostic: is the 125 spike driven by outlier event weights? ---
+        signal_df_y = signal_df_y.Filter(f"{cut_string}&&best_4g_ID_m{mass}==1&&{preselection}&&Pileup_weight<=10")
         core = signal_df_y.Filter(f"abs({var}-125.0)<0.25")
         print(f"[{y}] max event_weight: all={signal_df_y.Max('event_weight').GetValue():.4f} "
               f"core={core.Max('event_weight').GetValue():.4f}")
@@ -137,7 +136,6 @@ def run(mass, ctau, year):
         core.Display(["event_weight", "genWeight", "Pileup_weight", var], 8).Print()
         print(f"[{y}] max Pileup_weight ALL = {signal_df_y.Max('Pileup_weight').GetValue():.1f}")
         signal_df_y.Filter("event_weight > 1e-4").Display(["event_weight", "Pileup_weight", var], 10).Print()
-        # --- end diagnostic ---
         h_y = signal_df_y.Histo1D((f"sig_tmp_{y}", f"sig_tmp_{y}", bins_sig[0], bins_sig[1], bins_sig[2]), var, "event_weight")
         h_y_clone = h_y.GetValue().Clone(f"sig_scaled_{y}")
         h_y_clone.Scale(lumi_dict[y])
