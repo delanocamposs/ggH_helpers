@@ -168,7 +168,7 @@ def sig_bkg_histos(files, isMC, trees, mass, lifetime, selections, var, output_n
             #this if/else statement then filters beyond the common filters depending on if its signal or background, then writes and saves the histos
             if isMC[k]:
                 weight_formula_k = f"(genWeight / {sumw_dict[files[k]]}) * {sample_sigma} * {BR} * Pileup_weight"
-                rdf_j_k = rdf_j_k.Filter(f"best_4g_ID_m{mass}==1&&best_4g_passBitMap_loose_iso_m{mass}==1").Define("event_weight", weight_formula_k)
+                rdf_j_k = rdf_j_k.Filter(f"best_4g_ID_m{mass}==1&&best_4g_passBitMap_loose_iso_m{mass}==1&&abs(Pileup_weight)<=10").Define("event_weight", weight_formula_k)
                 #rdf_j_k = rdf_j_k.Filter("best_4g_ID_m{mass}==1&&((Photon_isScEtaEB[best_4g_idx1_m{mass}]==1 && Photon_corrIso_m{mass}[best_4g_idx1_m{mass}]<0.1)||(Photon_isScEtaEE[best_4g_idx1_m{mass}]==1 && Photon_corrIso_m{mass}[best_4g_idx1_m{mass}]<0.1)) && ((Photon_isScEtaEB[best_4g_idx2_m{mass}]==1 && Photon_corrIso_m{mass}[best_4g_idx2_m{mass}]<0.1)||(Photon_isScEtaEE[best_4g_idx2_m{mass}]==1 && Photon_corrIso_m{mass}[best_4g_idx2_m{mass}]<0.1)) && ((Photon_isScEtaEB[best_4g_idx3_m{mass}]==1 && Photon_corrIso_m{mass}[best_4g_idx3_m{mass}]<0.1)||(Photon_isScEtaEE[best_4g_idx3_m{mass}]==1 && Photon_corrIso_m{mass}[best_4g_idx3_m{mass}]<0.1)) && ((Photon_isScEtaEB[best_4g_idx4_m{mass}]==1 && Photon_corrIso_m{mass}[best_4g_idx4_m{mass}]<0.1)||(Photon_isScEtaEE[best_4g_idx4_m{mass}]==1 && Photon_corrIso_m{mass}[best_4g_idx4_m{mass}]<0.1))").Define("event_weight", weight_formula_k)
 
                 if EGM:
