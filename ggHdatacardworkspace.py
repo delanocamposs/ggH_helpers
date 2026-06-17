@@ -1,6 +1,7 @@
 import ROOT
 ROOT.gSystem.Load("libHiggsAnalysisCombinedLimit")
 import json
+from ggHdatacardparameters import signal_window, bernstein_coeff_card
 
 
 class DatacardWorkspace:
@@ -42,7 +43,7 @@ class DatacardWorkspace:
             self.w.factory(f"{syst}[0,-5,5]")
             resolutionStr += f"+{factor}*{syst}"
             resolutionSysts.append(syst)
-        self.w.factory(f"{variable}[100,200]")
+        self.w.factory(f"{variable}[{signal_window[0]},{signal_window[1]}]")
 
         with open(jsonFile) as f:
             info = json.load(f)
@@ -96,7 +97,7 @@ class DatacardWorkspace:
 
 
     def addBernstein(self, name, variable, jsonFile):
-        self.w.factory(f"{variable}[100,200]")
+        self.w.factory(f"{variable}[{signal_window[0]},{signal_window[1]}]")
         with open(jsonFile) as f:
             params = json.load(f)
         order = 0
@@ -108,7 +109,7 @@ class DatacardWorkspace:
         keys = [f"c_{i}" for i in range(order)]
         clist=ROOT.RooArgList()
         for coeffName, key in zip(coeffNames, keys):
-            self.w.factory("{name}[{val}, 0, 50]".format(name=coeffName, val=params[key]['value']))
+            self.w.factory("{name}[{val}, {lo}, {hi}]".format(name=coeffName, val=params[key]['value'], lo=bernstein_coeff_card[0], hi=bernstein_coeff_card[1]))
             clist.add(self.w.var(coeffName))
         pdfName = "_".join([name, self.tag])
         bernstein_pdf = ROOT.RooBernsteinFast(order)(pdfName,pdfName,self.w.var(variable),clist)
@@ -225,7 +226,7 @@ class DatacardWorkspace:
         histogram.Scale(scale)
         cList = ROOT.RooArgList()
         for i,p in enumerate(poi):
-            self.w.factory("{}[100,200]".format(p))
+            self.w.factory("{}[{},{}]".format(p, signal_window[0], signal_window[1]))
             cList.add(self.w.var(p))
             if i==0:
                 axis=histogram.GetXaxis()

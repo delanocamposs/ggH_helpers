@@ -12,6 +12,7 @@ from scipy.special import comb
 from scipy.integrate import simps
 from scipy.stats import beta
 from ggHfitter import fitBKG
+from ggHdatacardparameters import bkg_factor, bkg_scale_factor, bkg_scale_factor_egm
 ROOT.gROOT.SetBatch(False)
 
 def define_weightMC(file, tree, BR, xsec):
@@ -134,19 +135,6 @@ def sig_bkg_histos(files, isMC, trees, mass, lifetime, selections, var, output_n
             sumw_dict[filepath_i]=sumw
 
 
-    #these dictionary values are scales for the background distribution according to what year is being processed. 
-    #this needs to be done since hte 0.05124.... factor was derived from comparing sidebands of 2018 preselected vs ID data. 
-    #if we want to interpolate to any other year having derived the initial scale factor from 2018, all years need their own additional weight normalized by 2018 lumi
-    bkg_factor={"2016preVFP":[1/2*(36310/59830)], 
-                "2016postVFP":[1/2*(36210/59830)],
-                "2017":[41480/59830], 
-                "2018":[1], 
-                "Run2":[137620/59830], 
-                "2022":[34748/59830], 
-                "2023":[27245/59830], 
-                "2024":[108920/59830], 
-                "Run3":[170857/59830]}
-
     for j in range(len(selections)):
         selection_j = selections[j]
         output_file_j = ROOT.TFile(f"{output_names[j]}", "RECREATE")
@@ -205,14 +193,13 @@ def sig_bkg_histos(files, isMC, trees, mass, lifetime, selections, var, output_n
                 hist_j_k = rdf_j_k.Histo1D((f"{histo_names[j][k]}", f"{j}_{k};{var};Events", bins[0], bins[1], bins[2]), f"{var}")
 
                 if bkg_weight:
-                    ##this weight comes from scaling PRESELECTED 4g to the sidebands of FULLY ID'd 4g data in 2018 EGamma data.
-                    if EGM:    
-                        bkg_w = (1/7099)*(bkg_factor[year][0])
+                    if EGM:
+                        bkg_w = bkg_scale_factor_egm*(bkg_factor[year][0])
                     else:
-                        bkg_w = (15/7099)*(bkg_factor[year][0])
-                            
+                        bkg_w = bkg_scale_factor*(bkg_factor[year][0])
+
                     hist_j_k.Scale(lumi_scaling*bkg_w)
-        
+
                 else:
                     hist_j_k.Scale(lumi_scaling*1*bkg_factor[year][0])
 

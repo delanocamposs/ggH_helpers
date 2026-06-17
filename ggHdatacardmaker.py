@@ -1,7 +1,7 @@
 import ggHtools
 import ggHfitter
-import ggHsmear
 from ggHdatacardworkspace import DatacardWorkspace
+from ggHdatacardparameters import order_fit, order_gen, lxy1, lxy2, smear_resolution, lumis, xsec_unc, pdf_alphas_unc, lumi_unc
 import json 
 import os 
 import ROOT
@@ -26,7 +26,7 @@ def cleanup(year, finalstate, physics, cat, mass, lifetime):
     subprocess.run(["mv", f"rate_histos_m{mass}_ct{lifetime}_{cat}_{year}.root", f"m{mass}_ct{lifetime}_{cat}_{year}_{finalstate}_{physics}/"])
 #    subprocess.run(["mv", f"datacard_{physics}_{finalstate}_m{mass}_ct{lifetime}_{cat}_{year}.txt", f"{cat}_{year}_{finalstate}_{physics}/"])
     
-def main(paths, isMC, trees, var, categories, period, bins, lifetime, mass, finalstate="4g", physics="ggH", bkg_weight=True,order_fit=4, order_gen=3,lxy1=50, lxy2=50, lumi_scaling=1):
+def main(paths, isMC, trees, var, categories, period, bins, lifetime, mass, finalstate="4g", physics="ggH", bkg_weight=True,order_fit=order_fit, order_gen=order_gen,lxy1=lxy1, lxy2=lxy2, lumi_scaling=1):
     ROOT.gROOT.SetBatch(True)
     year=period
     cat_sum=0
@@ -38,23 +38,11 @@ def main(paths, isMC, trees, var, categories, period, bins, lifetime, mass, fina
     print(f"processing datacard for ct={lifetime} mm, mass={mass} GeV, year={year} in categories: {categories}")
     print("============================================================"+extra_str)
 
-    ##luminosities in pb^-1 from: https://twiki.cern.ch/twiki/bin/view/CMS/LumiRecommendationsRun2
-    lumis = {"2016preVFP":[1/2*(36310)],
-             "2016postVFP":[1/2*(36310)],
-             "2017":[41480], 
-             "2018":[59830], 
-             "Run2":[137620],
-             "2022":[34748], 
-             "2023":[27245], 
-             "2024":[108920], 
-             "Run3":[170857]}
-
-
     #combining HL and LH into one category now and renaming to simplify
-    cat_dict = {"high" : {"cut" : f"(best_4g_phi1_dxy_m30>{lxy1})&&(best_4g_phi2_dxy_m30>{lxy2})", "file" : ""},
-                    "asym" : {"cut" : f"(best_4g_phi1_dxy_m30>{lxy1})&&(best_4g_phi2_dxy_m30<{lxy2})||(best_4g_phi1_dxy_m30<{lxy1})&&(best_4g_phi2_dxy_m30>{lxy2})", "file" : ""}, 
-                    "low" : {"cut" : f"(best_4g_phi1_dxy_m30<{lxy1})&&(best_4g_phi2_dxy_m30<{lxy2})", "file" : ""}, 
-                    "all" : {"cut" : f"(best_4g_phi1_dxy_m30<{lxy1})&&(best_4g_phi2_dxy_m30<{lxy2})||(best_4g_phi1_dxy_m30<{lxy1})&&(best_4g_phi2_dxy_m30>{lxy2})||(best_4g_phi1_dxy_m30>{lxy1})&&(best_4g_phi2_dxy_m30<{lxy2})||(best_4g_phi1_dxy_m30>{lxy1})&&(best_4g_phi2_dxy_m30>{lxy2})", "file" : ""}}
+    cat_dict = {"displaced" : {"cut" : f"(best_4g_phi1_dxy_m{mass}>{lxy1})&&(best_4g_phi2_dxy_m{mass}>{lxy2})", "file" : ""},
+                    "asym" : {"cut" : f"(best_4g_phi1_dxy_m{mass}>{lxy1})&&(best_4g_phi2_dxy_m{mass}<{lxy2})||(best_4g_phi1_dxy_m{mass}<{lxy1})&&(best_4g_phi2_dxy_m{mass}>{lxy2})", "file" : ""},
+                    "prompt" : {"cut" : f"(best_4g_phi1_dxy_m{mass}<{lxy1})&&(best_4g_phi2_dxy_m{mass}<{lxy2})", "file" : ""},
+                    "all" : {"cut" : f"(best_4g_phi1_dxy_m{mass}<{lxy1})&&(best_4g_phi2_dxy_m{mass}<{lxy2})||(best_4g_phi1_dxy_m{mass}<{lxy1})&&(best_4g_phi2_dxy_m{mass}>{lxy2})||(best_4g_phi1_dxy_m{mass}>{lxy1})&&(best_4g_phi2_dxy_m{mass}<{lxy2})||(best_4g_phi1_dxy_m{mass}>{lxy1})&&(best_4g_phi2_dxy_m{mass}>{lxy2})", "file" : ""}}
 
 
     output_names = ["rate_histos_m{}_ct{}_{}_{}.root".format(mass, lifetime, cat, year) for cat in categories]
@@ -64,31 +52,9 @@ def main(paths, isMC, trees, var, categories, period, bins, lifetime, mass, fina
         pair = ["hist{}".format(2*i+1), "hist{}".format(2*i+2)]
         histo_names.append(pair)
 
-    #######IMPORTANT#######
-    #since the cross section we use to scale the MC is both ggH+VBF combined, these xsec and lumi unc are derived from adding the unc from 
-    #each process in quadrature    
-
-    #obtained xsec and PDF from:https://twiki.cern.ch/twiki/bin/view/LHCPhysics/CERNYellowReportPageAt13TeV#gluon_gluon_Fusion_Process
-    xsec_unc={"ggH":[0.046, -0.067],
-              "VBF":[0.004, -0.003]}
-
-    PDF_alphas_unc={"ggH":[0.032, 0.032], 
-                    "VBF":[0.021, 0.021]}
-
-    #lumi unc obtained from: https://twiki.cern.ch/twiki/bin/view/CMS/LumiRecommendationsRun2
-    lumi_unc={"2016preVFP":[0.012],
-              "2016postVFP":[0.012],
-              "2017":[0.023],
-              "2018":[0.025], 
-              "Run2": [0.016]}
-    #          "2022":[0.012],
-    #          "2023":[0.023],
-    #         "2024":[0.025],
-    #          "Run3":[0.02]} 
-
     xsec_quad_up = np.sqrt((xsec_unc["ggH"][0])**2+(xsec_unc["VBF"][0])**2)
     xsec_quad_down = np.sqrt((xsec_unc["ggH"][1])**2+(xsec_unc["VBF"][1])**2)
-    PDF_alphas_unc = np.sqrt((PDF_alphas_unc["ggH"][0])**2 + (PDF_alphas_unc["VBF"][0])**2)
+    PDF_alphas_unc = np.sqrt((pdf_alphas_unc["ggH"][0])**2 + (pdf_alphas_unc["VBF"][0])**2)
         
     signal_samples={}
     for j in isMC:
@@ -122,7 +88,7 @@ def main(paths, isMC, trees, var, categories, period, bins, lifetime, mass, fina
         ggHfitter.fitSIG(f"{th1d_filenames[i]}", f"{th1d_histos[i][0]}", f"fit_sig_m{mass}_ct{lifetime}_{cat}_{year}.root")
         ggHtools.extract_JSON(f"fit_sig_m{mass}_ct{lifetime}_{cat}_{year}.root", "w", f"sig_parameters_m{mass}_ct{lifetime}_{cat}_{year}.json")
 
-        dcm_cat_year.addDCB("signal", "mass", f"sig_parameters_m{mass}_ct{lifetime}_{cat}_{year}.json", resolution={f"nuisance_smear_m{mass}_ct{lifetime}_{cat}_{year}":"0.264"})
+        dcm_cat_year.addDCB("signal", "mass", f"sig_parameters_m{mass}_ct{lifetime}_{cat}_{year}.json", resolution={f"nuisance_smear_m{mass}_ct{lifetime}_{cat}_{year}":str(smear_resolution)})
 
         dcm_cat_year.addBernstein("background", "mass", f"bkg_parameters_m{mass}_ct{lifetime}_{cat}_{year}_fit.json")
 

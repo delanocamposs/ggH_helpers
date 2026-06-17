@@ -1,4 +1,5 @@
 import ROOT
+from ggHdatacardparameters import signal_window, dcb_mean, dcb_sigma, dcb_alpha1, dcb_n1, dcb_alpha2, dcb_n2, bernstein_coeff
 ROOT.gROOT.SetBatch(False)
 
 
@@ -10,7 +11,7 @@ class Fitter(object):
         self.dimensions = len(poi)
         self.poi=poi
         for v in poi:
-            self.w.factory(v+"[100,160]")
+            self.w.factory(f"{v}[{signal_window[0]},{signal_window[1]}]")
 
     def setRange(self,name,poi,low,high):
         self.w.var(poi).setRange(name,low,high)
@@ -18,12 +19,12 @@ class Fitter(object):
     def factory(self,expr):
         self.w.factory(expr)
 
-    def bernstein(self,name = 'model',poi='x',order=4):
+    def bernstein(self,name = 'model',poi='x',*,order):
         ROOT.gSystem.Load("libHiggsAnalysisCombinedLimit")
 
         cList = ROOT.RooArgList()
         for i in range(0,order):
-            self.w.factory("c_"+str(i)+"[0,100]")
+            self.w.factory(f"c_{i}[{bernstein_coeff[0]},{bernstein_coeff[1]}]")
             cList.add(self.w.var("c_"+str(i)))
         bernsteinPDF = ROOT.RooBernsteinFast(order)(name,name,self.w.var(poi),cList)
         getattr(self.w,'import')(bernsteinPDF)
@@ -31,12 +32,12 @@ class Fitter(object):
 
     def doubleCB(self,name = 'model',poi='x'):
         ROOT.gSystem.Load("libHiggsAnalysisCombinedLimit")
-        self.w.factory("mean[125,120,130]")
-        self.w.factory("sigma[2,0.1,20]")
-        self.w.factory("alpha1[2,1,20]")
-        self.w.factory("n1[2,1,50]")
-        self.w.factory("alpha2[2,1,20]")
-        self.w.factory("n2[2,1,50]")
+        self.w.factory(f"mean[{dcb_mean[0]},{dcb_mean[1]},{dcb_mean[2]}]")
+        self.w.factory(f"sigma[{dcb_sigma[0]},{dcb_sigma[1]},{dcb_sigma[2]}]")
+        self.w.factory(f"alpha1[{dcb_alpha1[0]},{dcb_alpha1[1]},{dcb_alpha1[2]}]")
+        self.w.factory(f"n1[{dcb_n1[0]},{dcb_n1[1]},{dcb_n1[2]}]")
+        self.w.factory(f"alpha2[{dcb_alpha2[0]},{dcb_alpha2[1]},{dcb_alpha2[2]}]")
+        self.w.factory(f"n2[{dcb_n2[0]},{dcb_n2[1]},{dcb_n2[2]}]")
         doubleCB = ROOT.RooDoubleCB(name,name,self.w.var(poi),self.w.var("mean"),self.w.var("sigma"),self.w.var("alpha1"),self.w.var("n1"),self.w.var("alpha2"),self.w.var("n2"))
         getattr(self.w,'import')(doubleCB)
 
@@ -103,15 +104,13 @@ class Fitter(object):
         return
 
 
-def fitBKG(file, hist, output_name, order=4, POI="mass", verbose=False):
+def fitBKG(file, hist, output_name, *, order, POI="mass", verbose=False):
     f = ROOT.TFile(file)
     bkg = f.Get(hist)
     fitter = Fitter([POI])
-    fitter.setRange("lower", "mass", 80,110)
-    fitter.setRange("upper", "mass", 140,170)
     fitter.bernstein('model',POI,order=order)
     fitter.importBinnedData(bkg,[POI])
-    fitter.fit("model","data",fitRange="lower,upper")
+    fitter.fit("model","data")
     chi2 = fitter.projection("model","data",POI,filename=output_name)
     output = ROOT.TFile(output_name, "UPDATE")
     output.cd()
@@ -128,7 +127,7 @@ def fitSIG(file, hist, output_name, POI="mass", verbose=False):
     fitterS.doubleCB('model',POI)
     fitterS.importBinnedData(signal,[POI],name = "data")
     #fit twice
-    fitterS.setRange("signal_window", "mass", 110, 140)
+    fitterS.setRange("signal_window", "mass", *signal_window)
     fitterS.fit("model","data", sumW2=True, fitRange="signal_window")
     chi2 = fitterS.projection("model","data",POI,filename=output_name)
     if verbose:
