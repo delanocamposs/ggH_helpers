@@ -20,13 +20,9 @@ class DatacardWorkspace:
         self.w=ROOT.RooWorkspace("w","w")
         self.luminosity=luminosity
         self.w.factory(self.physics+"_"+period+"_lumi["+str(luminosity)+"]")
-        if period=='8TeV':
-            self.sqrt_s=8000.0
-        if period=='13TeV':
-            self.sqrt_s=13000.0
 
 
-    def addSystematic(self,name,kind,values,addPar = ""):
+    def addSystematic(self,name,kind,values):
         self.systematics.append({'name':name,'kind':kind,'values':values })
 
 
@@ -100,6 +96,7 @@ class DatacardWorkspace:
 
 
     def addBernstein(self, name, variable, jsonFile):
+        self.w.factory(f"{variable}[100,200]")
         with open(jsonFile) as f:
             params = json.load(f)
         order = 0
@@ -128,6 +125,7 @@ class DatacardWorkspace:
         else:
             events=histogram.Integral()*self.luminosity
             self.contributions.append({'name':name,'pdf':pdfName,'ID':ID,'yield':events})
+        f.Close()
 
 
     def makeCard(self):
@@ -247,3 +245,4 @@ class DatacardWorkspace:
         dataHist=ROOT.RooDataHist(name,name,cList,histogram)
 
         getattr(self.w,'import')(dataHist,ROOT.RooFit.Rename(name))
+        f.Close()

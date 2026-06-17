@@ -18,7 +18,7 @@ class Fitter(object):
     def factory(self,expr):
         self.w.factory(expr)
 
-    def bernstein(self,name = 'model',poi='x',order=1):
+    def bernstein(self,name = 'model',poi='x',order=4):
         ROOT.gSystem.Load("libHiggsAnalysisCombinedLimit")
 
         cList = ROOT.RooArgList()
