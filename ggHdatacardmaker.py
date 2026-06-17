@@ -1,8 +1,7 @@
-import ggHtools 
-import ggHcardhelper 
+import ggHtools
 import ggHfitter
 import ggHsmear
-from DataCardMaker import DataCardMaker
+from ggHdatacardworkspace import DatacardWorkspace
 import json 
 import os 
 import ROOT
@@ -27,7 +26,7 @@ def cleanup(year, finalstate, physics, cat, mass, lifetime):
     subprocess.run(["mv", f"rate_histos_m{mass}_ct{lifetime}_{cat}_{year}.root", f"m{mass}_ct{lifetime}_{cat}_{year}_{finalstate}_{physics}/"])
 #    subprocess.run(["mv", f"datacard_{physics}_{finalstate}_m{mass}_ct{lifetime}_{cat}_{year}.txt", f"{cat}_{year}_{finalstate}_{physics}/"])
     
-def main(paths, isMC, trees, var, categories, period, bins, lifetime, mass, finalstate="4g", physics="ggH", bkg_weight=True,order_fit=3, order_gen=3,lxy1=50, lxy2=50, lumi_scaling=1):
+def main(paths, isMC, trees, var, categories, period, bins, lifetime, mass, finalstate="4g", physics="ggH", bkg_weight=True,order_fit=4, order_gen=3,lxy1=50, lxy2=50, lumi_scaling=1):
     ROOT.gROOT.SetBatch(True)
     year=period
     cat_sum=0
@@ -110,7 +109,7 @@ def main(paths, isMC, trees, var, categories, period, bins, lifetime, mass, fina
     i=0
     for cat in categories:
         bkg_rate=th1d_histo_obj[i][1].Integral()
-        dcm_cat_year = DataCardMaker(finalstate, cat, period, lifetime, mass, lumis[year][0], physics)
+        dcm_cat_year = DatacardWorkspace(finalstate, cat, period, lifetime, mass, lumis[year][0], physics)
 
         #we need to fit bkg twice because one fit is used to generate the data and one fit is used for combine fit
         #two jsons with parameters: fit and gen. gen=used to generate data. fit=used in combine.
@@ -123,10 +122,9 @@ def main(paths, isMC, trees, var, categories, period, bins, lifetime, mass, fina
         ggHfitter.fitSIG(f"{th1d_filenames[i]}", f"{th1d_histos[i][0]}", f"fit_sig_m{mass}_ct{lifetime}_{cat}_{year}.root")
         ggHtools.extract_JSON(f"fit_sig_m{mass}_ct{lifetime}_{cat}_{year}.root", "w", f"sig_parameters_m{mass}_ct{lifetime}_{cat}_{year}.json")
 
-        ggHcardhelper.addDCB(dcm_cat_year, "signal", "mass", f"sig_parameters_m{mass}_ct{lifetime}_{cat}_{year}.json", resolution={f"nuisance_smear_m{mass}_ct{lifetime}_{cat}_{year}":"0.264"})
+        dcm_cat_year.addDCB("signal", "mass", f"sig_parameters_m{mass}_ct{lifetime}_{cat}_{year}.json", resolution={f"nuisance_smear_m{mass}_ct{lifetime}_{cat}_{year}":"0.264"})
 
-        #the bernstein used in the combine workspace, hence the order=order_fit
-        ggHcardhelper.addBernstein(dcm_cat_year, "background", "mass", f"bkg_parameters_m{mass}_ct{lifetime}_{cat}_{year}_fit.json")
+        dcm_cat_year.addBernstein("background", "mass", f"bkg_parameters_m{mass}_ct{lifetime}_{cat}_{year}_fit.json")
 
         dcm_cat_year.addSystematic(name=f"nuisance_smear_m{mass}_ct{lifetime}_{cat}_{year}", kind = "param", values=[0.0, 1.0])
         dcm_cat_year.addSystematic(name=f"xsec_unc_m{mass}_ct{lifetime}_{cat}_{year}", kind = "lnN", values={"signal":f"{1+xsec_quad_up}/{1-xsec_quad_down}"})

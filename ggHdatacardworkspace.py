@@ -3,7 +3,7 @@ ROOT.gSystem.Load("libHiggsAnalysisCombinedLimit")
 import json
 
 
-class DataCardMaker:
+class DatacardWorkspace:
     def __init__(self,finalstate,category,period,lifetime,mass,luminosity=1.0,physics="ggH"):
         self.physics=str(physics)
         self.lifetime=str(lifetime)
@@ -28,6 +28,94 @@ class DataCardMaker:
 
     def addSystematic(self,name,kind,values,addPar = ""):
         self.systematics.append({'name':name,'kind':kind,'values':values })
+
+
+    def addDCB(self, name, variable, jsonFile, scale={}, resolution={}):
+        self.w.factory("MH[125.0]")
+        self.w.var("MH").setConstant(1)
+        scaleStr = '0'
+        resolutionStr = '0'
+        scaleSysts = []
+        resolutionSysts = []
+
+        for syst, factor in scale.items():
+            self.w.factory(f"{syst}[0,-0.1,0.1]")
+            scaleStr += f"+{factor}*{syst}"
+            scaleSysts.append(syst)
+        for syst, factor in resolution.items():
+            self.w.factory(f"{syst}[0,-5,5]")
+            resolutionStr += f"+{factor}*{syst}"
+            resolutionSysts.append(syst)
+        self.w.factory(f"{variable}[100,200]")
+
+        with open(jsonFile) as f:
+            info = json.load(f)
+
+            SCALEVar="_".join(["MEAN",name,self.tag])
+            self.w.factory("expr::{name}('({param})*(1+{vv_syst})',{vv_systs})".format(
+            name=SCALEVar,
+            param=info['mean']['value'],
+            vv_syst=scaleStr,
+            vv_systs=','.join(scaleSysts)))
+
+            SIGMAVar="_".join(["SIGMA",name,self.tag])
+            self.w.factory("expr::{name}('({param})*(1+{vv_syst})',{vv_systs})".format(
+            name=SIGMAVar,
+            param=info['sigma']['value'],
+            vv_syst=resolutionStr,
+            vv_systs=','.join(resolutionSysts)))
+
+            ALPHA1Var="_".join(["ALPHA1",name,self.tag])
+            self.w.factory("expr::{name}('MH*0+{param}',MH)".format(
+            name=ALPHA1Var,
+            param=info['alpha1']['value']))
+
+            ALPHA2Var="_".join(["ALPHA2",name,self.tag])
+            self.w.factory("expr::{name}('MH*0+{param}',MH)".format(
+            name=ALPHA2Var,
+            param=info['alpha2']['value']))
+
+            N1Var="_".join(["N1",name,self.tag])
+            self.w.factory("expr::{name}('MH*0+{param}',MH)".format(
+            name=N1Var,
+            param=info['n1']['value']))
+
+            N2Var="_".join(["N2",name,self.tag])
+            self.w.factory("expr::{name}('MH*0+{param}',MH)".format(
+            name=N2Var,
+            param=info['n2']['value']))
+
+            pdfName="_".join([name,self.tag])
+
+
+        fourPhotonMass = ROOT.RooDoubleCB(pdfName, pdfName,
+                                          self.w.var(variable),
+                                          self.w.function(SCALEVar),
+                                          self.w.function(SIGMAVar),
+                                          self.w.function(ALPHA1Var),
+                                          self.w.function(N1Var),
+                                          self.w.function(ALPHA2Var),
+                                          self.w.function(N2Var))
+        self.w.Import(fourPhotonMass)
+
+
+    def addBernstein(self, name, variable, jsonFile):
+        with open(jsonFile) as f:
+            params = json.load(f)
+        order = 0
+        while f"c_{order}" in params:
+            order += 1
+        if order == 0:
+            raise ValueError(f"No Bernstein coefficients (c_0, c_1, ...) found in {jsonFile}")
+        coeffNames = [f"c_{i}_bkg" for i in range(order)]
+        keys = [f"c_{i}" for i in range(order)]
+        clist=ROOT.RooArgList()
+        for coeffName, key in zip(coeffNames, keys):
+            self.w.factory("{name}[{val}, 0, 50]".format(name=coeffName, val=params[key]['value']))
+            clist.add(self.w.var(coeffName))
+        pdfName = "_".join([name, self.tag])
+        bernstein_pdf = ROOT.RooBernsteinFast(order)(pdfName,pdfName,self.w.var(variable),clist)
+        self.w.Import(bernstein_pdf)
 
 
     def addFixedYieldFromFile(self,name,ID,filename,histoName,lumi=True):
