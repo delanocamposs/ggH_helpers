@@ -1,8 +1,8 @@
 import ROOT
 import subprocess
-import tdrstyle
-import CMS_lumi
-from ggHdatacardmaker import main
+from plotting import tdrstyle
+from plotting import CMS_lumi
+from datacard.ggHdatacardmaker import main
 
 def fetchError(q, n):
     l=0

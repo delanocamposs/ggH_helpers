@@ -2,8 +2,8 @@ import ROOT
 import os 
 import sys 
 import argparse, subprocess
-from ggHtools import define_weightMC
-from ggHcmsstyle import CMSstyle
+from datacard.ggHtools import define_weightMC
+from plotting.ggHcmsstyle import CMSstyle
 ROOT.gROOT.SetBatch(True)
 ROOT.ROOT.EnableImplicitMT()
 

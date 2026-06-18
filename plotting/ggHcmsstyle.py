@@ -1,5 +1,5 @@
-import CMS_lumi 
-import tdrstyle 
+from plotting import CMS_lumi
+from plotting import tdrstyle
 import ROOT 
 
 class CMSstyle:

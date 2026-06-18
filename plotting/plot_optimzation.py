@@ -1,7 +1,7 @@
 import ROOT 
 import subprocess 
-from ggHdatacardmaker import main
-from ggHdatacardmaker import cleanup
+from datacard.ggHdatacardmaker import main
+from datacard.ggHdatacardmaker import cleanup
 
 def two_dim(xmin, xmax,ymin,  ymax, xbins, ybins, order, year):
     ##generates the data points for a beautiful heat map to optimize categroeis

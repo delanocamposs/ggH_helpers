@@ -1,10 +1,10 @@
 import ROOT
-import ggHfitter
+from datacard import ggHfitter
 import argparse
 import subprocess
-import tdrstyle
-import CMS_lumi
-from ggHdatacardmaker import main
+from plotting import tdrstyle
+from plotting import CMS_lumi
+from datacard.ggHdatacardmaker import main
 ROOT.gROOT.SetBatch(True)
 
 def fetchError(q, n):

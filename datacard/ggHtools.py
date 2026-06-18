@@ -11,7 +11,7 @@ import json
 from scipy.special import comb
 from scipy.integrate import simps
 from scipy.stats import beta
-from ggHfitter import fitBKG
+from datacard.ggHfitter import fitBKG
 from ggHdatacardparameters import bkg_factor, bkg_scale_factor, bkg_scale_factor_egm
 ROOT.gROOT.SetBatch(False)
 

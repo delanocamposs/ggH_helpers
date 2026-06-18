@@ -1,5 +1,5 @@
 import ROOT 
-from ggHcmsstyle import CMSstyle
+from plotting.ggHcmsstyle import CMSstyle
 import numpy
 
 def plot_2D():

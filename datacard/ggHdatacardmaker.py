@@ -1,6 +1,6 @@
-import ggHtools
-import ggHfitter
-from ggHdatacardworkspace import DatacardWorkspace
+from datacard import ggHtools
+from datacard import ggHfitter
+from datacard.ggHdatacardworkspace import DatacardWorkspace
 from ggHdatacardparameters import order_fit, order_gen, lxy1, lxy2, smear_resolution, lumis, xsec_unc, pdf_alphas_unc, lumi_unc
 import json 
 import os 

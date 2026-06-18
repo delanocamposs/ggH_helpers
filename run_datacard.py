@@ -1,5 +1,5 @@
-from ggHdatacardmaker import *
-from plot_postfit import plot
+from datacard.ggHdatacardmaker import *
+from plotting.plot_postfit import plot
 from ggHdatacardparameters import bins
 
 def combine_workflow(cat, year, mass, lifetime, finalstate, physics):

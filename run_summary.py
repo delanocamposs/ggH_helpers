@@ -1,5 +1,5 @@
 import ROOT
-import plot_summary
+from plotting import plot_summary
 
 def main():
     #for mass in ['15','20','30','40','50','55']:
