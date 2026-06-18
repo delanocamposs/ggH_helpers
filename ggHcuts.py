@@ -9,7 +9,7 @@ def dxy_valid(mass):
 def preselection(mass):
     return " && ".join(f"Photon_preselection[best_4g_idx{i}_m{mass}]==1" for i in range(1, 5))
 
-def signal_id(mass):
+def full_id(mass):
     return f"best_4g_ID_m{mass}==1 && best_4g_passBitMap_loose_iso_m{mass}==1"
 
 def pileup():
