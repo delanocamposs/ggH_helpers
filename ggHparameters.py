@@ -55,15 +55,19 @@ xsec_unc = {"ggH": [0.046, -0.067],
 pdf_alphas_unc = {"ggH": [0.032, 0.032],
                   "VBF": [0.021, 0.021]}
 
-#lumi unc obtained from: https://twiki.cern.ch/twiki/bin/view/CMS/LumiRecommendationsRun2
-#Run2 now covers 2017+2018 only (2016 dropped).
-lumi_unc = {"2017": [0.023],
-            "2018": [0.025],
-            "Run2": [0.03387]}
-#          "2022":[0.012],
-#          "2023":[0.023],
-#         "2024":[0.025],
-#          "Run3":[0.02]}
+#https://twiki.cern.ch/twiki/bin/view/CMS/LumiRecommendationsRun3
+#https://twiki.cern.ch/twiki/bin/view/CMS/LumiRecommendationsRun2
+lumi_unc = {"2017": 0.008072175,
+            "2018": 0.008409014,
+            "Run2": 0.011656,
+            "2022preEE": 0.0136,  #assuming suberas use the full-year value
+            "2022postEE": 0.0136,
+            "2022": 0.0136,
+            "2023preBPix": 0.0115,  #assuming suberas use the full-year value
+            "2023postBPix": 0.0115,
+            "2023": 0.0115,
+            "2024": 0.0161,
+            "Run3": 0.011947}
 
 dcb_mean = (125, 120, 130)
 dcb_sigma = (2, 0.1, 20)
