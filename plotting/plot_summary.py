@@ -18,9 +18,6 @@ def run(mass, ctau, year):
     ROOT.gStyle.SetEndErrorSize(2)
 
     
-    BR=1e-4
-    scale_factor=1
-    xsec=52.143
     right=0.1
     left=0.14
     up=0.08
@@ -62,7 +59,7 @@ def run(mass, ctau, year):
             for entry in runs_tree:
                 sumw_y += entry.genEventSumw
         signal_df_y = ROOT.RDataFrame("ggH4g", sig_y)
-        weight_y = f"(genWeight / {sumw_y}) * {xsec} * {BR} * Pileup_weight"
+        weight_y = cuts.mc_weight(sumw_y)
         signal_df_y = signal_df_y.Define("event_weight", weight_y)
         signal_df_y = signal_df_y.Filter(cuts.combine(cuts.trigger(), cuts.dxy_valid(mass), cuts.full_id(mass), cuts.preselection(mass), cuts.pileup()))
         core = signal_df_y.Filter(f"abs({var}-125.0)<0.25")

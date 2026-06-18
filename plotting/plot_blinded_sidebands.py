@@ -2,7 +2,6 @@ import ROOT
 import os 
 import sys 
 import argparse, subprocess
-from datacard.datacardtools import define_weightMC
 from plotting.ggHcmsstyle import CMSstyle
 from ggHparameters import lumi
 import ggHcuts as cuts
@@ -11,8 +10,6 @@ ROOT.ROOT.EnableImplicitMT()
 
 
 def run(mass, ctau, year):
-    BR=1e-4
-    xsec=52.143
     c=ROOT.TCanvas("", "", 800, 800)
     right=0.08
     left=0.14
@@ -32,7 +29,7 @@ def run(mass, ctau, year):
         runs_tree = f.Get("Runs")
         for entry in runs_tree:
             sumw += entry.genEventSumw
-    weight_formula = f"(genWeight / {sumw}) * {xsec} * {BR} * Pileup_weight"
+    weight_formula = cuts.mc_weight(sumw)
     signal_df=signal_df.Define("event_weight", weight_formula)
     
     data_ID_df=ROOT.RDataFrame("ggH4g", bkg)

@@ -1,4 +1,4 @@
-from ggHparameters import lxy1, lxy2, dxy_min, signal_window
+from ggHparameters import lxy1, lxy2, dxy_min, signal_window, signal_xsec, BR
 
 def trigger():
     return "HLT_passed==1"
@@ -14,6 +14,9 @@ def full_id(mass):
 
 def pileup():
     return "abs(Pileup_weight)<=10"
+
+def mc_weight(sumw):
+    return f"(genWeight / {sumw}) * {signal_xsec} * {BR} * Pileup_weight"
 
 def blind(mass, window=signal_window):
     lo,hi = window

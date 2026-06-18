@@ -12,25 +12,9 @@ from scipy.special import comb
 from scipy.integrate import simps
 from scipy.stats import beta
 from datacard.ggHfitter import fitBKG
-from ggHparameters import bkg_factor, bkg_scale_factor, signal_xsec, BR
+from ggHparameters import bkg_factor, bkg_scale_factor
 import ggHcuts as cuts
 ROOT.gROOT.SetBatch(False)
-
-def define_weightMC(file, tree, BR, xsec):
-    '''returns a dataframe that has the event weight defined by the BR, xsec, genWeight, PU weight and sumw'''
-    df=ROOT.RDataFrame(tree, file)
-    sumw=0.0
-    weight_formula = f"(genWeight / {sumw}) * {xsec} * {BR} * Pileup_weight"
-    with ROOT.TFile.Open(file) as f:
-        runs_tree = f.Get("Runs")
-        if runs_tree:
-            for entry in runs_tree:
-                sumw += entry.genEventSumw
-    if sumw == 0:
-        print("sum of weights is 0")
-        sumw = 1.0
-    df=df.Define("event_weight", weight_formula)
-    return df
 
 
 
@@ -86,7 +70,7 @@ def sig_bkg_histos(files, isMC, trees, mass, lifetime, selections, var, output_n
             rdf_j_k=ROOT.RDataFrame(trees[k], files[k])
             rdf_j_k = rdf_j_k.Filter(cuts.combine(cuts.trigger(), cuts.dxy_valid(mass))).Filter(selection_j)
             if isMC[k]:
-                weight_formula_k = f"(genWeight / {sumw_dict[files[k]]}) * {signal_xsec} * {BR} * Pileup_weight"
+                weight_formula_k = cuts.mc_weight(sumw_dict[files[k]])
                 rdf_j_k = rdf_j_k.Filter(cuts.combine(cuts.full_id(mass), cuts.pileup())).Define("event_weight", weight_formula_k)
                 hist_j_k = rdf_j_k.Histo1D((f"{histo_names[j][k]}", f"{j}_{k};{var};Events", bins[0], bins[1], bins[2]), f"{var}", "event_weight")
                 hist_j_k.Scale(lumi_scaling)
