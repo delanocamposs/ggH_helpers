@@ -1,5 +1,5 @@
 import ROOT
-from ggHdatacardparameters import signal_window, dcb_mean, dcb_sigma, dcb_alpha1, dcb_n1, dcb_alpha2, dcb_n2, bernstein_coeff
+from ggHparameters import signal_window, dcb_mean, dcb_sigma, dcb_alpha1, dcb_n1, dcb_alpha2, dcb_n2, bernstein_coeff
 ROOT.gROOT.SetBatch(False)
 
 

@@ -1,7 +1,7 @@
 from datacard import ggHtools
 from datacard import ggHfitter
 from datacard.ggHdatacardworkspace import DatacardWorkspace
-from ggHdatacardparameters import order_fit, order_gen, lxy1, lxy2, smear_resolution, lumis, xsec_unc, pdf_alphas_unc, lumi_unc
+from ggHparameters import order_fit, order_gen, lxy1, lxy2, smear_resolution, lumi, xsec_unc, pdf_alphas_unc, lumi_unc
 import json 
 import os 
 import ROOT
@@ -75,7 +75,7 @@ def main(paths, isMC, trees, var, categories, period, bins, lifetime, mass, fina
     i=0
     for cat in categories:
         bkg_rate=th1d_histo_obj[i][1].Integral()
-        dcm_cat_year = DatacardWorkspace(finalstate, cat, period, lifetime, mass, lumis[year][0], physics)
+        dcm_cat_year = DatacardWorkspace(finalstate, cat, period, lifetime, mass, lumi[year], physics)
 
         #we need to fit bkg twice because one fit is used to generate the data and one fit is used for combine fit
         #two jsons with parameters: fit and gen. gen=used to generate data. fit=used in combine.

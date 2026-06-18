@@ -1,6 +1,6 @@
 from datacard.ggHdatacardmaker import *
 from plotting.plot_postfit import plot
-from ggHdatacardparameters import bins
+from ggHparameters import bins
 
 def combine_workflow(cat, year, mass, lifetime, finalstate, physics):
     card_txt = f"datacard_{physics}_{finalstate}_m{mass}_ct{lifetime}_{cat}_{year}.txt"

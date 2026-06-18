@@ -5,6 +5,7 @@ import subprocess
 from plotting import tdrstyle
 from plotting import CMS_lumi
 from datacard.ggHdatacardmaker import main
+from ggHparameters import lumi
 ROOT.gROOT.SetBatch(True)
 
 def fetchError(q, n):
@@ -51,27 +52,10 @@ def save_histos(mass, year, ctau, hist1, hist2):
     return 
 
 def run(mass, ctau, year):
-    lumi_dict={
-        #recommendation for pre/postVFP values here: https://twiki.cern.ch/twiki/bin/view/CMS/PdmVDatasetsUL2016
-        "2016preVFP":19500,
-        "2016postVFP":16800,
-        "2016":19500+16800,
-        "2017":41480,
-        "2018":59830,
-        "Run2":137620,
-        "2022preEE":7990,
-        "2022postEE":26680,
-        "2022":7990+26680,
-        "2023preBPix":17960,
-        "2023postBPix":9680,
-        "2023":17960+9680,
-        "2024":109820,
-        "Run3":170857
-        }
     tdrstyle.setTDRStyle()
     CMS_lumi.writeExtraText = True
     CMS_lumi.extraText="Preliminary"
-    CMS_lumi.lumi_13TeV=f"{year}, {lumi_dict[year]/1000} fb^{-1}"
+    CMS_lumi.lumi_13TeV=f"{year}, {lumi[year]/1000} fb^{-1}"
     ROOT.gStyle.SetEndErrorSize(2)
 
     
@@ -91,17 +75,14 @@ def run(mass, ctau, year):
     bins=bins_data
     var=f"best_4g_corr_mass_m{mass}"
 
-    run2_years = ["2016preVFP", "2016postVFP", "2017", "2018"]
+    run2_years = ["2017", "2018"]
     run3_years = ["2022preEE", "2022postEE", "2023preBPix","2023postBPix", "2024"]
-    years_2016 = ["2016preVFP", "2016postVFP"]
     years_2022 = ["2022preEE", "2022postEE"]
     years_2023 = ["2023preBPix", "2023postBPix"]
     if year == "Run2":
         years_to_process = run2_years
     elif year == "Run3":
         years_to_process = run3_years
-    elif year == "2016":
-        years_to_process = years_2016
     elif year == "2022":
         years_to_process = years_2022
     elif year == "2023":
@@ -138,7 +119,7 @@ def run(mass, ctau, year):
         signal_df_y.Filter("event_weight > 1e-4").Display(["event_weight", "Pileup_weight", var], 10).Print()
         h_y = signal_df_y.Histo1D((f"sig_tmp_{y}", f"sig_tmp_{y}", bins_sig[0], bins_sig[1], bins_sig[2]), var, "event_weight")
         h_y_clone = h_y.GetValue().Clone(f"sig_scaled_{y}")
-        h_y_clone.Scale(lumi_dict[y])
+        h_y_clone.Scale(lumi[y])
         if h_sig_total is None:
             h_sig_total = h_y_clone.Clone("signal_hist")
         else:

@@ -12,7 +12,8 @@ from scipy.special import comb
 from scipy.integrate import simps
 from scipy.stats import beta
 from datacard.ggHfitter import fitBKG
-from ggHdatacardparameters import bkg_factor, bkg_scale_factor, bkg_scale_factor_egm
+from ggHparameters import bkg_factor, bkg_scale_factor, signal_xsec, BR
+import ggHcuts as cuts
 ROOT.gROOT.SetBatch(False)
 
 def define_weightMC(file, tree, BR, xsec):
@@ -20,7 +21,6 @@ def define_weightMC(file, tree, BR, xsec):
     df=ROOT.RDataFrame(tree, file)
     sumw=0.0
     weight_formula = f"(genWeight / {sumw}) * {xsec} * {BR} * Pileup_weight"
-
     with ROOT.TFile.Open(file) as f:
         runs_tree = f.Get("Runs")
         if runs_tree:
@@ -51,76 +51,22 @@ def sig_bkg_histos(files, isMC, trees, mass, lifetime, selections, var, output_n
     sig_bkg_histos(["path/to/MC", "path/to/bkg"], [1, 0], ["ggH4g", "ggH4g"], ["best_4g_phi1_dxy_m{mass}>50", "best_4g_phi2_dxy_m{mass}<50"], "best_4g_cor_mass_m{mass}", ["output1.root", "output2.root"], [["hist1", "hist2"], ["hist3", "hist4"]])
     '''
 
-    sample_sigma=52.143
-    BR=1e-4
     outputs=[]
     sumw_dict={}
-    
-#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-    #this is for the purposes of testing the effects of various triggers (pT cuts on leading/subleading photons) on the limit
-    #im simulating 33GeV double photon trigger here
-    double_photon=False
-    PT_MIN=33
-   # ROOT.gInterpreter.Declare(f"""
-   # bool passPtCut(float a,float b,float c,float d) {{
-   #     float lead=std::max({{a,b,c,d}});
-   #     float sub=-1e9f;
-   #     if(a!=lead) sub=a;
-   #     if(b!=lead && b>sub) sub=b;
-   #     if(c!=lead && c>sub) sub=c;
-   #     if(d!=lead && d>sub) sub=d;
-   #     return lead>={PT_MIN} && sub>={PT_MIN};
-   # }}
-   # struct Pair {{ float l; float s; }};
-   # Pair getLeadSub(float a,float b,float c,float d) {{
-   #     float pts[4]={{a,b,c,d}};
-   #     std::sort(pts,pts+4,std::greater<float>());
-   #     return {{pts[0], pts[1]}};
-   # }}
-   # """)
-#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-    #now this is for testing the effects of the different ID'ing methods on the limit: loose EGM ID versus the custom loose ID we use. 
-    EGM=False
-#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++    
-
-    
-
     if len(output_names) != len(selections):
         print(f"ERROR: the number of selections must match the number of desired saved output file names. one saved file for each selection")
         return
-
     selection_num = len(selections)
     file_num = len(files)
-    idx=0
-
     if len(histo_names) == 0:
         histo_names = [[] for _ in range(selection_num)]
         for i in range(selection_num):
             for j in range(file_num):
                 histo_names[i].append(f"hist_{i}_{j}")
-
     histo_obj = [[] for _ in range(selection_num)]
 
-
-    #adding this raw background histo so i can generate toys from it. need it prior to any category cuts. dont need sig histo 
-    output_raw_bkg = ROOT.TFile(f"rate_histos_raw_bkg_{year}.root", "RECREATE")
-    raw_rdf_bkg=ROOT.RDataFrame(trees[1], files[1]) 
-
-    raw_rdf_bkg=raw_rdf_bkg.Filter(f"HLT_passed==1 && Photon_preselection[best_4g_idx1_m{mass}]==1 && Photon_preselection[best_4g_idx2_m{mass}]==1 && Photon_preselection[best_4g_idx3_m{mass}]==1 && Photon_preselection[best_4g_idx4_m{mass}]==1 && best_4g_phi1_dxy_m{mass}>-20 && best_4g_phi2_dxy_m{mass}>-20")
-
-    if double_photon: 
-        raw_rdf_bkg=raw_rdf_bkg.Define(f"top2_pT_over_{PT_MIN}", f"passPtCut(best_4g_phi1_gamma1_pt_m{mass},best_4g_phi1_gamma2_pt_m{mass},best_4g_phi2_gamma1_pt_m{mass},best_4g_phi2_gamma2_pt_m{mass})").Define("pTpair", f"getLeadSub(best_4g_phi1_gamma1_pt_m{mass},best_4g_phi1_gamma2_pt_m{mass},best_4g_phi2_gamma1_pt_m{mass},best_4g_phi2_gamma2_pt_m{mass})").Define("LeadpT", "pTpair.l").Define("subLeadpT", "pTpair.s")
-        raw_rdf_bkg = raw_rdf_bkg.Filter(f"top2_pT_over_{PT_MIN}==1")
-
-    raw_hist_bkg=raw_rdf_bkg.Histo1D(("bkg_hist", f"bkg_hist;{var};Events", bins[0], bins[1], bins[2]),f"{var}")
-    raw_hist_bkg.Write()
-    output_raw_bkg.Close()
-    
     for i in range(len(files)):
         filepath_i = files[i]
-        file_i = ROOT.TFile.Open(files[i])
-        tree_i = trees[i]
-
         if isMC[i]:
             sumw=0.0
             with ROOT.TFile.Open(filepath_i) as f:
@@ -131,113 +77,53 @@ def sig_bkg_histos(files, isMC, trees, mass, lifetime, selections, var, output_n
             if sumw == 0:
                 print("sum of weights is 0")
                 sumw = 1.0
-
             sumw_dict[filepath_i]=sumw
-
-
     for j in range(len(selections)):
         selection_j = selections[j]
         output_file_j = ROOT.TFile(f"{output_names[j]}", "RECREATE")
         outputs.append(output_file_j)
-
         for k in range(len(files)):
             rdf_j_k=ROOT.RDataFrame(trees[k], files[k])
-    
-            #common filters for both signal and backgroound
-            rdf_j_k = rdf_j_k.Filter(f"HLT_passed==1 && best_4g_phi1_dxy_m{mass}>-20 && best_4g_phi2_dxy_m{mass}>-20").Filter(selection_j)
-
-            #if we want to test the double photon trigger
-            if double_photon:
-                rdf_j_k=rdf_j_k.Define(f"top2_pT_over_{PT_MIN}", f"passPtCut(best_4g_phi1_gamma1_pt_m{mass},best_4g_phi1_gamma2_pt_m{mass},best_4g_phi2_gamma1_pt_m{mass},best_4g_phi2_gamma2_pt_m{mass})")
-                rdf_j_k=rdf_j_k.Define("pTpair", f"getLeadSub(best_4g_phi1_gamma1_pt_m{mass},best_4g_phi1_gamma2_pt_m{mass},best_4g_phi2_gamma1_pt_m{mass},best_4g_phi2_gamma2_pt_m{mass})").Define("LeadpT", "pTpair.l").Define("subLeadpT", "pTpair.s")
-                rdf_j_k = rdf_j_k.Filter(f"top2_pT_over_{PT_MIN}==1")
-    
-
-            #this if/else statement then filters beyond the common filters depending on if its signal or background, then writes and saves the histos
+            rdf_j_k = rdf_j_k.Filter(cuts.combine(cuts.trigger(), cuts.dxy_valid(mass))).Filter(selection_j)
             if isMC[k]:
-                weight_formula_k = f"(genWeight / {sumw_dict[files[k]]}) * {sample_sigma} * {BR} * Pileup_weight"
-                rdf_j_k = rdf_j_k.Filter(f"best_4g_ID_m{mass}==1&&best_4g_passBitMap_loose_iso_m{mass}==1&&abs(Pileup_weight)<=10").Define("event_weight", weight_formula_k)
-                #rdf_j_k = rdf_j_k.Filter("best_4g_ID_m{mass}==1&&((Photon_isScEtaEB[best_4g_idx1_m{mass}]==1 && Photon_corrIso_m{mass}[best_4g_idx1_m{mass}]<0.1)||(Photon_isScEtaEE[best_4g_idx1_m{mass}]==1 && Photon_corrIso_m{mass}[best_4g_idx1_m{mass}]<0.1)) && ((Photon_isScEtaEB[best_4g_idx2_m{mass}]==1 && Photon_corrIso_m{mass}[best_4g_idx2_m{mass}]<0.1)||(Photon_isScEtaEE[best_4g_idx2_m{mass}]==1 && Photon_corrIso_m{mass}[best_4g_idx2_m{mass}]<0.1)) && ((Photon_isScEtaEB[best_4g_idx3_m{mass}]==1 && Photon_corrIso_m{mass}[best_4g_idx3_m{mass}]<0.1)||(Photon_isScEtaEE[best_4g_idx3_m{mass}]==1 && Photon_corrIso_m{mass}[best_4g_idx3_m{mass}]<0.1)) && ((Photon_isScEtaEB[best_4g_idx4_m{mass}]==1 && Photon_corrIso_m{mass}[best_4g_idx4_m{mass}]<0.1)||(Photon_isScEtaEE[best_4g_idx4_m{mass}]==1 && Photon_corrIso_m{mass}[best_4g_idx4_m{mass}]<0.1))").Define("event_weight", weight_formula_k)
-
-                if EGM:
-                    EGM_ID = " && ".join(f"((Photon_isScEtaEB[best_4g_idx{i}_m{mass}]==1 && Photon_hoe[best_4g_idx{i}_m{mass}]<0.04596 && Photon_sieie[best_4g_idx{i}_m{mass}]<0.0106)||(Photon_isScEtaEE[best_4g_idx{i}_m{mass}]==1 && Photon_hoe[best_4g_idx{i}_m{mass}]<0.0590 && Photon_sieie[best_4g_idx{i}_m{mass}]<0.0272))" for i in range(1, 5))
-                    rdf_j_k = rdf_j_k.Filter(f"{EGM_ID}")
-
+                weight_formula_k = f"(genWeight / {sumw_dict[files[k]]}) * {signal_xsec} * {BR} * Pileup_weight"
+                rdf_j_k = rdf_j_k.Filter(cuts.combine(cuts.signal_id(mass), cuts.pileup())).Define("event_weight", weight_formula_k)
                 hist_j_k = rdf_j_k.Histo1D((f"{histo_names[j][k]}", f"{j}_{k};{var};Events", bins[0], bins[1], bins[2]), f"{var}", "event_weight")
-
-                if double_photon:
-                    hist_test1 = rdf_j_k.Histo1D(("leadsig", f"leadsig;LeadpT;Events", 100, 0, 160), "LeadpT")
-                    hist_test2 = rdf_j_k.Histo1D(("subleadsig", f"subleadsig;subLeadpT;Events", 100, 0, 160), "subLeadpT")
-                    hist_test1.Write()
-                    hist_test2.Write()
-
-                print("event weight: ", weight_formula_k)
                 hist_j_k.Scale(lumi_scaling)
                 hist_j_k.Write()
                 histo_obj[j].append(hist_j_k)
-
             else:
-                rdf_j_k = rdf_j_k.Filter(f"Photon_preselection[best_4g_idx1_m{mass}]==1 && Photon_preselection[best_4g_idx2_m{mass}]==1 && Photon_preselection[best_4g_idx3_m{mass}]==1 && Photon_preselection[best_4g_idx4_m{mass}]==1")
-
-                #if EGM:
-                #    EGM_ID = " && ".join(f"((Photon_isScEtaEB[best_4g_idx{i}_m{mass}]==1 && Photon_hoe[best_4g_idx{i}_m{mass}]<0.04596 && Photon_sieie[best_4g_idx{i}_m{mass}]<0.0106)||(Photon_isScEtaEE[best_4g_idx{i}_m{mass}]==1 && Photon_hoe[best_4g_idx{i}_m{mass}]<0.0590 && Photon_sieie[best_4g_idx{i}_m{mass}]<0.0272))" for i in range(1, 5))
-                #    rdf_j_k = rdf_j_k.Filter(f"{EGM_ID}")
-
-
-                if double_photon:
-                    hist_test3 = rdf_j_k.Histo1D(("leadbkg", f"leadbkg;LeadpT;Events", 100, 0, 160), "LeadpT")
-                    hist_test4 = rdf_j_k.Histo1D(("subleadbkg", f"subleadbkg;subLeadpT;Events", 100, 0, 160), "subLeadpT")
-                    hist_test3.Write()
-                    hist_test4.Write()
-
+                rdf_j_k = rdf_j_k.Filter(cuts.preselection(mass))
                 hist_j_k = rdf_j_k.Histo1D((f"{histo_names[j][k]}", f"{j}_{k};{var};Events", bins[0], bins[1], bins[2]), f"{var}")
-
                 if bkg_weight:
-                    if EGM:
-                        bkg_w = bkg_scale_factor_egm*(bkg_factor[year][0])
-                    else:
-                        bkg_w = bkg_scale_factor*(bkg_factor[year][0])
-
-                    hist_j_k.Scale(lumi_scaling*bkg_w)
-
+                    hist_j_k.Scale(lumi_scaling*bkg_scale_factor*bkg_factor[year][0])
                 else:
-                    hist_j_k.Scale(lumi_scaling*1*bkg_factor[year][0])
-
+                    hist_j_k.Scale(lumi_scaling*bkg_factor[year][0])
                 hist_j_k.Write()
                 histo_obj[j].append(hist_j_k)
-         
         output_file_j.Close()
-
     return outputs, output_names, histo_names, histo_obj
 
-
 def extract_JSON(root_filename, workspace_name, json_filename):
-
     '''
     creates a JSON file in the format the datcard needs from a root file, the name of the 
     RooWorkspace in the file.
     '''
-
     f = ROOT.TFile(root_filename)
     ws = f.Get(workspace_name)
-
     if not ws:
         print(f"Error: Workspace '{workspace_name}' not found in {root_filename}")
         return
-
     params = {}
     all_vars = ws.allVars()
     it = all_vars.createIterator()
     var = it.Next()
-
     while var:
         if var.InheritsFrom("RooRealVar"):
             params[var.GetName()] = {"value": var.getVal(), "error": var.getError()}
         var = it.Next()
-
     with open(json_filename, "w") as json_file:
         json.dump(params, json_file, indent=4)
-
     f.Close()
 
 
@@ -275,20 +161,6 @@ def generate_data_hist(file, bins_num, norm, output_name):
 
     return output_name
 
-
-def generate_bkg_toy(file, bins_num, norm, output_name, toys=1):
-    f=ROOT.TFile.Open(file)
-    h=f.Get("hist")
-    output_file = ROOT.TFile(output_name, "RECREATE")
-
-    for i in range(1, h.GetNbinsX()+1):
-        density=h.GetBinContent(i)
-        bw=h.GetXaxis().GetBinWidth(i)
-        h.SetBinContent(i, (1/100)*np.random.poisson(100*density))
-    h.Write()
-    output_file.Close()
-
-    return output_name
 
 def clopper_pearson(X, n, alpha=0.05):
     "by default i am doing 95% CL, change alpha to change this: CL=1-alpha"

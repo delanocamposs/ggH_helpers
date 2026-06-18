@@ -1,7 +1,7 @@
 import ROOT
 ROOT.gSystem.Load("libHiggsAnalysisCombinedLimit")
 import json
-from ggHdatacardparameters import signal_window, bernstein_coeff_card
+from ggHparameters import signal_window, bernstein_coeff_card
 
 
 class DatacardWorkspace:
