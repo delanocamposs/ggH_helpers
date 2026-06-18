@@ -1,4 +1,4 @@
-from datacard import ggHtools
+from datacard import datacardtools
 from datacard import ggHfitter
 from datacard.ggHdatacardworkspace import DatacardWorkspace
 from ggHparameters import order_fit, order_gen, lxy1, lxy2, smear_resolution, lumi, xsec_unc, pdf_alphas_unc, lumi_unc
@@ -70,7 +70,7 @@ def main(paths, isMC, trees, var, categories, period, bins, lifetime, mass, fina
     selections.reverse()
     #print(selections)
     
-    th1d_files, th1d_filenames, th1d_histos, th1d_histo_obj = ggHtools.sig_bkg_histos(paths, isMC, trees,mass,lifetime, selections, var, output_names, bins, year, histo_names, bkg_weight, lumi_scaling=lumi_scaling)
+    th1d_files, th1d_filenames, th1d_histos, th1d_histo_obj = datacardtools.sig_bkg_histos(paths, isMC, trees,mass,lifetime, selections, var, output_names, bins, year, histo_names, bkg_weight, lumi_scaling=lumi_scaling)
 
     i=0
     for cat in categories:
@@ -80,13 +80,13 @@ def main(paths, isMC, trees, var, categories, period, bins, lifetime, mass, fina
         #we need to fit bkg twice because one fit is used to generate the data and one fit is used for combine fit
         #two jsons with parameters: fit and gen. gen=used to generate data. fit=used in combine.
         ggHfitter.fitBKG(f"{th1d_filenames[i]}", f"{th1d_histos[i][1]}", f"fit_bkg_m{mass}_ct{lifetime}_{cat}_{year}_fit.root", order=order_fit)
-        ggHtools.extract_JSON(f"fit_bkg_m{mass}_ct{lifetime}_{cat}_{year}_fit.root", "w", f"bkg_parameters_m{mass}_ct{lifetime}_{cat}_{year}_fit.json")
+        datacardtools.extract_JSON(f"fit_bkg_m{mass}_ct{lifetime}_{cat}_{year}_fit.root", "w", f"bkg_parameters_m{mass}_ct{lifetime}_{cat}_{year}_fit.json")
 
         ggHfitter.fitBKG(f"{th1d_filenames[i]}", f"{th1d_histos[i][1]}", f"fit_bkg_m{mass}_ct{lifetime}_{cat}_{year}_gen.root", order=order_gen)
-        ggHtools.extract_JSON(f"fit_bkg_m{mass}_ct{lifetime}_{cat}_{year}_gen.root", "w", f"bkg_parameters_m{mass}_ct{lifetime}_{cat}_{year}_gen.json")
+        datacardtools.extract_JSON(f"fit_bkg_m{mass}_ct{lifetime}_{cat}_{year}_gen.root", "w", f"bkg_parameters_m{mass}_ct{lifetime}_{cat}_{year}_gen.json")
 
         ggHfitter.fitSIG(f"{th1d_filenames[i]}", f"{th1d_histos[i][0]}", f"fit_sig_m{mass}_ct{lifetime}_{cat}_{year}.root")
-        ggHtools.extract_JSON(f"fit_sig_m{mass}_ct{lifetime}_{cat}_{year}.root", "w", f"sig_parameters_m{mass}_ct{lifetime}_{cat}_{year}.json")
+        datacardtools.extract_JSON(f"fit_sig_m{mass}_ct{lifetime}_{cat}_{year}.root", "w", f"sig_parameters_m{mass}_ct{lifetime}_{cat}_{year}.json")
 
         dcm_cat_year.addDCB("signal", "mass", f"sig_parameters_m{mass}_ct{lifetime}_{cat}_{year}.json", resolution={f"nuisance_smear_m{mass}_ct{lifetime}_{cat}_{year}":str(smear_resolution)})
 
@@ -103,7 +103,7 @@ def main(paths, isMC, trees, var, categories, period, bins, lifetime, mass, fina
 
         workspace_file_cat_year = "datacardInputs_"+dcm_cat_year.tag+".root"
 
-        data_cat_year_name = ggHtools.generate_data_hist(f"fit_bkg_m{mass}_ct{lifetime}_{cat}_{year}_gen.root", bins_num=bins[0], norm=bkg_rate, output_name=f"data_obs_m{mass}_ct{lifetime}_{cat}_{year}.root")
+        data_cat_year_name = datacardtools.generate_data_hist(f"fit_bkg_m{mass}_ct{lifetime}_{cat}_{year}_gen.root", bins_num=bins[0], norm=bkg_rate, output_name=f"data_obs_m{mass}_ct{lifetime}_{cat}_{year}.root")
 
         dcm_cat_year.importBinnedData(data_cat_year_name, "h_pdf__mass", ["mass"])
             

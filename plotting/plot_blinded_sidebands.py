@@ -2,7 +2,7 @@ import ROOT
 import os 
 import sys 
 import argparse, subprocess
-from datacard.ggHtools import define_weightMC
+from datacard.datacardtools import define_weightMC
 from plotting.ggHcmsstyle import CMSstyle
 from ggHparameters import lumi
 import ggHcuts as cuts
