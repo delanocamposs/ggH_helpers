@@ -5,6 +5,7 @@ import argparse, subprocess
 from datacard.ggHtools import define_weightMC
 from plotting.ggHcmsstyle import CMSstyle
 from ggHparameters import lumi
+import ggHcuts as cuts
 ROOT.gROOT.SetBatch(True)
 ROOT.ROOT.EnableImplicitMT()
 
@@ -12,12 +13,6 @@ ROOT.ROOT.EnableImplicitMT()
 def run(mass, ctau, year):
     BR=1e-4
     xsec=52.143
-    cut_string=f"HLT_passed==1&&best_4g_phi1_dxy_m{mass}>-20&&best_4g_phi2_dxy_m{mass}>-20"
-    preselection=f"(Photon_preselection[best_4g_idx1_m{mass}]==1)&&(Photon_preselection[best_4g_idx2_m{mass}]==1)&&(Photon_preselection[best_4g_idx3_m{mass}]==1)&&(Photon_preselection[best_4g_idx4_m{mass}]==1)"
-    blind=f"((best_4g_corr_mass_m{mass}<110)||(best_4g_corr_mass_m{mass}>140))"
-    #blind=f"(best_4g_corr_mass_m{mass}<110)"
-    
-    
     c=ROOT.TCanvas("", "", 800, 800)
     right=0.08
     left=0.14
@@ -43,9 +38,9 @@ def run(mass, ctau, year):
     data_ID_df=ROOT.RDataFrame("ggH4g", bkg)
     data_pre_df=ROOT.RDataFrame("ggH4g", bkg)
     
-    signal_df=signal_df.Filter(f"{cut_string}&&best_4g_ID_m{mass}==1")
-    data_ID_df=data_ID_df.Filter(f"{preselection}&&{cut_string}&&best_4g_ID_m{mass}==1&&{blind}")
-    data_pre_df=data_pre_df.Filter(f"{cut_string}&&{preselection}&&{blind}")
+    signal_df=signal_df.Filter(cuts.combine(cuts.trigger(), cuts.dxy_valid(mass), cuts.full_id(mass), cuts.pileup()))
+    data_ID_df=data_ID_df.Filter(cuts.combine(cuts.preselection(mass), cuts.trigger(), cuts.dxy_valid(mass), cuts.full_id(mass), cuts.blind(mass)))
+    data_pre_df=data_pre_df.Filter(cuts.combine(cuts.trigger(), cuts.dxy_valid(mass), cuts.preselection(mass), cuts.blind(mass)))
     
     signal_histo=signal_df.Histo1D(("hist1_1", f"hist1_1;{var};Events", bins[0], bins[1], bins[2]), f"best_4g_corr_mass_m{mass}", "event_weight")
     signal_histo.Scale(lumi[year])

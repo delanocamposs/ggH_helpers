@@ -6,6 +6,7 @@ from plotting import tdrstyle
 from plotting import CMS_lumi
 from datacard.ggHdatacardmaker import main
 from ggHparameters import lumi
+import ggHcuts as cuts
 ROOT.gROOT.SetBatch(True)
 
 def fetchError(q, n):
@@ -62,9 +63,6 @@ def run(mass, ctau, year):
     BR=1e-4
     scale_factor=1
     xsec=52.143
-    cut_string=f"HLT_passed==1&&best_4g_phi1_dxy_m{mass}>-20&&best_4g_phi2_dxy_m{mass}>-20"
-    preselection=f"(Photon_preselection[best_4g_idx1_m{mass}]==1)&&(Photon_preselection[best_4g_idx2_m{mass}]==1)&&(Photon_preselection[best_4g_idx3_m{mass}]==1)&&(Photon_preselection[best_4g_idx4_m{mass}]==1)"
-    blind=f"((best_4g_corr_mass_m{mass}<110)||(best_4g_corr_mass_m{mass}>140))"
     right=0.1
     left=0.14
     up=0.08
@@ -92,7 +90,7 @@ def run(mass, ctau, year):
 
     bkg=f"/eos/uscms/store/user/dacampos/analysis/data/EGamma_{year}_updated/EGamma_{year}_all_ggH4g.root"
     data_ID_df=ROOT.RDataFrame("ggH4g", bkg)
-    data_ID_df=data_ID_df.Filter(f"{preselection}&&{cut_string}&&best_4g_ID_m{mass}==1&&{blind}")
+    data_ID_df=data_ID_df.Filter(cuts.combine(cuts.preselection(mass), cuts.trigger(), cuts.dxy_valid(mass), cuts.full_id(mass), cuts.blind(mass)))
     h_data=data_ID_df.Histo1D(("data_hist", f"data_hist;4#gamma mass;Events", bins_data[0], bins_data[1], bins_data[2]), f"{var}")
 
     #signal histogram built separately for each year.
@@ -108,7 +106,7 @@ def run(mass, ctau, year):
         signal_df_y = ROOT.RDataFrame("ggH4g", sig_y)
         weight_y = f"(genWeight / {sumw_y}) * {xsec} * {BR} * Pileup_weight"
         signal_df_y = signal_df_y.Define("event_weight", weight_y)
-        signal_df_y = signal_df_y.Filter(f"{cut_string}&&best_4g_ID_m{mass}==1&&{preselection}&&Pileup_weight<=10")
+        signal_df_y = signal_df_y.Filter(cuts.combine(cuts.trigger(), cuts.dxy_valid(mass), cuts.full_id(mass), cuts.preselection(mass), cuts.pileup()))
         core = signal_df_y.Filter(f"abs({var}-125.0)<0.25")
         print(f"[{y}] max event_weight: all={signal_df_y.Max('event_weight').GetValue():.4f} "
               f"core={core.Max('event_weight').GetValue():.4f}")
