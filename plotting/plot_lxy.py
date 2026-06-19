@@ -50,7 +50,6 @@ histo=df.Histo2D(("", "", nbins, xmin, xmax, nbins, ymin, ymax), "best_4g_phi1_d
 
 histo.Scale(15/7099)
 #histo.Scale(lumi)
-print(histo.Integral())
 histo.GetXaxis().SetTitle("#phi_{1} L_{xy} (cm)        ")
 histo.GetYaxis().SetTitle("#phi_{2} L_{xy} (cm)        ")
 #histo.GetYaxis().SetTitle("   #phi_{2} L_{xy} (cm)")

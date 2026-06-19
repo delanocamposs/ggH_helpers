@@ -21,13 +21,11 @@ def plot_2D():
             temps.append(float(line.strip()))
 
     histo=ROOT.TH2F("hist", "", nbins, xmin, xmax, nbins, ymin, ymax)
-    print(temps)
     for ix in range(nbins):
         for iy in range(nbins):
             index=ix*nbins+iy
             x=ix*((xmax-abs(xmin))/(nbins-1))
             y=iy*((ymax-abs(ymin))/(nbins-1))
-            print(x, y, temps[index])
             histo.Fill(x, y, 1e-4*temps[index])
             
 
@@ -76,13 +74,11 @@ def plot_1D():
     histo=ROOT.TH1F("hist", "", nbins, xmin, xmax)
     xs=[]
     CLs=[]
-    print(temps)
     for ix in range(nbins):
         x=10*ix-20
         xs.append(x)
         CLs.append(temps[ix])
-    print(xs, CLs)
-            
+
     for i in range(len(xs)):
         histo.Fill(xs[i], CLs[i])
 

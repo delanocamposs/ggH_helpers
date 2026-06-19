@@ -29,7 +29,6 @@ def two_dim(xmin, xmax,ymin,  ymax, xbins, ybins, order, year):
             for entry in limit_tree:
                 upper_lim = entry.limit
                 arr.append(upper_lim)
-                #print(upper_lim)
             print(arr[2])
             limit_array.append(arr[2])
 
@@ -63,7 +62,6 @@ def one_dim(xmin, xmax, xinterval, order, year):
         for entry in limit_tree:
             upper_lim = entry.limit
             arr.append(upper_lim)
-            #print(upper_lim)
         print(arr[2])
         limit_array.append(arr[2])
 
