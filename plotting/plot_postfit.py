@@ -1,7 +1,7 @@
 import ROOT
 import subprocess
-from plotting import tdrstyle
-from plotting import CMS_lumi
+from plotting.style import tdrstyle
+from plotting.style import CMS_lumi
 from datacard.ggHdatacardmaker import main
 from ggHparameters import lumi
 from plotting.plottingtools import fetchError, getPoisson, getPoisson2

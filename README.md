@@ -45,13 +45,14 @@ runs the fits, and builds plots for the analysis
 │   └── ggHdatacardworkspace.py 
 │
 └── plotting/               # main plotters + plotting infrastructure
-    ├── ggHcmsstyle.py      
-    ├── CMS_lumi.py         
-    ├── tdrstyle.py        
-    ├── plottingtools.py   
+    ├── plottingtools.py    
     ├── plot_summary.py     #blinded sideband plot with S+B model in signal region
     ├── plot_postfit.py     #pre fit and post fit plots from combine
     ├── UL_vs_mass.py       #scan of expected upper limits vs mass/lifetime
+    ├── style/              #CMS plotting style helpers
+    │   ├── ggHcmsstyle.py  
+    │   ├── CMS_lumi.py     
+    │   └── tdrstyle.py     
     └── studies/            #one-off scripts from internal studies
         ├── plot_blinded_sidebands.py  #used for SF derivation
         ├── plot_limits.py             #1D/2D limit plots

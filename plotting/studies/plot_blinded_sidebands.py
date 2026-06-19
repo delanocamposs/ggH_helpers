@@ -2,7 +2,7 @@ import ROOT
 import os 
 import sys 
 import argparse, subprocess
-from plotting.ggHcmsstyle import CMSstyle
+from plotting.style.ggHcmsstyle import CMSstyle
 from ggHparameters import lumi
 import ggHcuts as cuts
 ROOT.gROOT.SetBatch(True)

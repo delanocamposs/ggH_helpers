@@ -1,5 +1,5 @@
 import ROOT
-from plotting.ggHcmsstyle import CMSstyle
+from plotting.style.ggHcmsstyle import CMSstyle
 import numpy
 
 
