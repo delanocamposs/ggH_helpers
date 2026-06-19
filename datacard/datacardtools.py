@@ -125,8 +125,6 @@ def generate_data_hist(file, bins_num, norm, output_name):
     h_pdf1.Scale(norm)
 
     total_expected = float(h_pdf.Integral())
-    prob_all_zero = float(np.exp(-total_expected))
-    print(f"[generate_data_hist] input={file}, output={output_name}, "f"expected_total={total_expected:.6g}, P(all bins are 0)={prob_all_zero:.6g}")
     if total_expected < 1:
         print("[generate_data_hist] WARNING: expected total events is < 1. A fully empty toy histogram is likely and can be statistically consistent.")
 
@@ -137,8 +135,6 @@ def generate_data_hist(file, bins_num, norm, output_name):
         density=h_pdf.GetBinContent(i)
         bw=h_pdf.GetXaxis().GetBinWidth(i)
         h_pdf.SetBinContent(i, np.random.poisson(density))
-
-    print(f"[generate_data_hist] toy_total={h_pdf.Integral():.6g}")
 
     h_pdf.Write()
     output_file.Close()

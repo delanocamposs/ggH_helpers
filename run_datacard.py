@@ -1,3 +1,5 @@
+import warnings
+warnings.filterwarnings("ignore", message="The value of the smallest subnormal")
 from datacard.ggHdatacardmaker import *
 from ggHparameters import bins
 
@@ -35,7 +37,23 @@ def combined_datacard(year, cats, mass, lifetime, finalstate, physics):
 
 def run(signal, bkg, cat, year, mass, lifetime, finalstate, physics, bins):
     #only builds the datacard; run combine manually afterwards
+    mustard = "\033[38;5;136m"
+    teal = "\033[38;5;44m"
+    reset = "\033[0m"
+    border = "============================================================"
+    dirname = f"m{mass}_ct{lifetime}_{cat}_{year}_{finalstate}_{physics}"
+
+    print(f"{teal}{border}{reset}")
+    print(f"{mustard}• searching for pre-existing directory: {dirname}{reset}")
+    if os.path.isdir(dirname):
+        shutil.rmtree(dirname)
+        print(f"{mustard}  ↳ found. overriding previous datacard results.{reset}")
+    else:
+        print(f"{mustard}  ↳ not found, building directory: {dirname}{reset}")
+
     main(paths=[signal, bkg], isMC=[1,0], trees=["ggH4g","ggH4g"], var=f"best_4g_corr_mass_m{mass}", categories=[cat],period=year, bins=bins, lifetime=lifetime, mass=mass, lumi_scaling=1)
+
+    print(f"{mustard}• updated directory {dirname}.{reset}")
 
 if __name__=="__main__":
     parser = argparse.ArgumentParser("Datacard Processing for year, category")

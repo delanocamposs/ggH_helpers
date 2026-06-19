@@ -35,7 +35,8 @@ runs the fits, and builds plots for the analysis
 ├── ggHcuts.py              #all cuts used in analysis in one place
 │                           
 │
-├── run_datacard.py         # builds full datacards and loops over years, masses, lifetimes
+├── run_datacard.py         # builds datacards for all years, masses, lifetimes
+├── run_postfit.py          # builds cards + runs combine + makes postfit plots
 ├── run_summary.py          # makes summary plots for all years, lifetimes, masses
 │
 ├── datacard/               #code related to datacard creation  (fitting machinery, building cards, workspaces, etc)
@@ -63,16 +64,26 @@ runs the fits, and builds plots for the analysis
 
 ## Usage
 
-### 1. Build datacards & run the fit — `run_datacard.py`
+The three `run_*.py` scripts share the same interface: a single point via
+`-m/-ct/-y` (plus `-c1..-c4` categories where relevant), or a whole run via
+`-process_run2 1` / `-process_run3 1`. They are deliberately separated —
+`run_datacard.py` only builds cards, and the plotting scripts build whatever
+they need on top of that.
 
-**To run for a single point: (mass,lifetime,era)**
+### 1. Build datacards — `run_datacard.py`
+
+**Builds datacards only** (no Combine fits, no plots). Run Combine yourself
+afterwards.
+
+**Single point** (mass, lifetime, era):
 
 ```bash
 python3 run_datacard.py -s /path/to/signal_ggH4g.root -b /path/to/data_EGamma.root -m 30 -ct 100 -y 2018 -c1 prompt -c2 asym -c3 displaced
 ```
 
-This builds each category card, runs Combine, makes the postfit plots, and combines the cards into
-`datacard_ggH_4g_m30_ct100_combined_2018.txt`.
+This writes each category card plus the combined card
+`datacard_ggH_4g_m30_ct100_combined_2018.txt`, then prints a green summary of
+what was made.
 
 **Process an entire run** (loops all configured mass/lifetime/era points and
 combines cards automatically):
@@ -82,16 +93,37 @@ python3 run_datacard.py -process_run2 1   # 2017, 2018
 python3 run_datacard.py -process_run3 1   # 2022, 2023, 2024
 ```
 
-### 2. Summary plots — `run_summary.py`
-
-Loops over all mass / lifetime / year points and writes a signal+background
-summary plot for each:
+Then set limits / fit manually, e.g.:
 
 ```bash
-python3 run_summary.py
+text2workspace.py datacard_ggH_4g_m30_ct100_combined_2018.txt -o ws.root
+combine -M AsymptoticLimits ws.root -m 125
 ```
 
-### 3. Expected-limit scan — `UL_vs_mass.py`
+### 2. Postfit plots — `run_postfit.py`
+
+**Depends on `run_datacard`.** For each point/category it builds the card, runs
+Combine (`MultiDimFit` + `FitDiagnostics`), and draws the pre/post-fit plots.
+Same interface as `run_datacard.py`:
+
+```bash
+python3 run_postfit.py -s /path/to/signal.root -b /path/to/data.root -m 30 -ct 100 -y 2018 -c1 prompt -c2 asym -c3 displaced
+python3 run_postfit.py -process_run2 1
+python3 run_postfit.py -process_run3 1
+```
+
+### 3. Summary plots — `run_summary.py`
+
+Independent of the datacards — summary plots build their own histograms from the
+ntuples. Single point or whole run:
+
+```bash
+python3 run_summary.py -m 30 -ct 100 -y 2018
+python3 run_summary.py -process_run2 1
+python3 run_summary.py -process_run3 1
+```
+
+### 4. Expected-limit scan — `UL_vs_mass.py`
 
 Scans `(mass, lifetime, year)`, building cards, running
 `AsymptoticLimits`, and collecting the median expected upper limit on `r`.
@@ -101,7 +133,7 @@ Edit the point lists at the bottom of the file, then:
 python3 -m plotting.UL_vs_mass
 ```
 
-### 4. Individual plotters
+### 5. Individual plotters
 
 The plotters under `plotting/` import the package, so run them as **modules**
 from this directory:
@@ -113,7 +145,7 @@ from this directory:
 `plot_postfit.plot(...)` is normally driven by `run_datacard.py` rather than run
 standalone.
 
-### 5. Internal-study scripts — `plotting/studies/`
+### 6. Internal-study scripts — `plotting/studies/`
 
 One-off scripts kept for reference; also run as modules from this directory:
 

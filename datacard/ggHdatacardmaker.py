@@ -11,6 +11,8 @@ import shutil
 import glob
 
 ROOT.gROOT.SetBatch(False)
+ROOT.RooMsgService.instance().setGlobalKillBelow(ROOT.RooFit.ERROR)
+ROOT.gErrorIgnoreLevel = ROOT.kError
 
 def cleanup(year, finalstate, physics, cat, mass, lifetime):
     subprocess.run(["rm", f"cache.root"])
@@ -29,14 +31,10 @@ def cleanup(year, finalstate, physics, cat, mass, lifetime):
 def main(paths, isMC, trees, var, categories, period, bins, lifetime, mass, finalstate="4g", physics="ggH", bkg_weight=True,order_fit=order_fit, order_gen=order_gen,lxy1=lxy1, lxy2=lxy2, lumi_scaling=1):
     ROOT.gROOT.SetBatch(True)
     year=period
-    cat_sum=0
-    for cat in categories:
-        cat_sum+=len(cat)
-    extra_str="="*cat_sum
 
-    print("============================================================"+extra_str)
-    print(f"processing datacard for ct={lifetime} mm, mass={mass} GeV, year={year} in categories: {categories}")
-    print("============================================================"+extra_str)
+    teal = "\033[38;5;44m"
+    reset = "\033[0m"
+    print(f"{teal}processing datacard for ct={lifetime} mm, mass={mass} GeV, year={year} in categories: {categories}{reset}")
 
     #combining HL and LH into one category now and renaming to simplify
     cat_dict = {"displaced" : {"cut" : f"(best_4g_phi1_dxy_m{mass}>{lxy1})&&(best_4g_phi2_dxy_m{mass}>{lxy2})", "file" : ""},
@@ -108,10 +106,6 @@ def main(paths, isMC, trees, var, categories, period, bins, lifetime, mass, fina
         dcm_cat_year.importBinnedData(data_cat_year_name, "h_pdf__mass", ["mass"])
             
         dcm_cat_year.makeCard()
-
-        print("======================================")
-        print("datacard successfully made for {}".format(dcm_cat_year.tag))
-        print("=====================================")
 
         cleanup(year, finalstate, physics, cat, mass, lifetime)
 
