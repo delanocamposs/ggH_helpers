@@ -37,7 +37,6 @@ runs the fits, and builds plots for the analysis
 │
 ├── run_datacard.py         # builds full datacards and loops over years, masses, lifetimes
 ├── run_summary.py          # makes summary plots for all years, lifetimes, masses
-├── UL_vs_mass.py           
 │
 ├── datacard/               #code related to datacard creation  (fitting machinery, building cards, workspaces, etc)
 │   ├── ggHdatacardmaker.py 
@@ -45,18 +44,20 @@ runs the fits, and builds plots for the analysis
 │   ├── ggHfitter.py       
 │   └── ggHdatacardworkspace.py 
 │
-└── plotting/               # all plotters + plotting infrastructure
+└── plotting/               # main plotters + plotting infrastructure
     ├── ggHcmsstyle.py      
     ├── CMS_lumi.py         
     ├── tdrstyle.py        
     ├── plottingtools.py   
     ├── plot_summary.py     #blinded sideband plot with S+B model in signal region
-    ├── plot_blinded_sidebands.py  #used for SF derivation
     ├── plot_postfit.py     #pre fit and post fit plots from combine
-    ├── plot_limits.py      
-    ├── plot_optimization.py
-    ├── plot_lxy.py         
-    └── plot_comparison.py 
+    ├── UL_vs_mass.py       #scan of expected upper limits vs mass/lifetime
+    └── studies/            #one-off scripts from internal studies
+        ├── plot_blinded_sidebands.py  #used for SF derivation
+        ├── plot_limits.py             #1D/2D limit plots
+        ├── plot_optimization.py       #category-boundary optimization scan
+        ├── plot_lxy.py                #2D L_xy heatmap
+        └── plot_comparison.py         #ggH vs VH cross-section comparison
 ```
 
 ## Usage
@@ -96,7 +97,7 @@ Scans `(mass, lifetime, year)`, building cards, running
 Edit the point lists at the bottom of the file, then:
 
 ```bash
-python3 UL_vs_mass.py
+python3 -m plotting.UL_vs_mass
 ```
 
 ### 4. Individual plotters
@@ -107,12 +108,19 @@ from this directory:
 | Command | Produces |
 | --- | --- |
 | `python3 -m plotting.plot_summary -m 30 -ct 100 -y 2018` | S+B summary plot |
-| `python3 -m plotting.plot_blinded_sidebands -m 30 -ct 100 -y 2018` | blinded sideband comparison |
-| `python3 -m plotting.plot_limits` | 1D limit plot (`plot_2D()` for the heatmap) |
-| `python3 -m plotting.plot_optimization` | category-boundary optimization scan |
-| `python3 -m plotting.plot_lxy` | 2D `L_xy` heatmap |
-| `python3 -m plotting.plot_comparison` | ggH vs. VH cross-section comparison |
 
 `plot_postfit.plot(...)` is normally driven by `run_datacard.py` rather than run
 standalone.
+
+### 5. Internal-study scripts — `plotting/studies/`
+
+One-off scripts kept for reference; also run as modules from this directory:
+
+| Command | Produces |
+| --- | --- |
+| `python3 -m plotting.studies.plot_blinded_sidebands -m 30 -ct 100 -y 2018` | blinded sideband comparison (SF derivation) |
+| `python3 -m plotting.studies.plot_limits` | 1D limit plot (`plot_2D()` for the heatmap) |
+| `python3 -m plotting.studies.plot_optimization` | category-boundary optimization scan |
+| `python3 -m plotting.studies.plot_lxy` | 2D `L_xy` heatmap |
+| `python3 -m plotting.studies.plot_comparison` | ggH vs. VH cross-section comparison |
 
