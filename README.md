@@ -66,11 +66,7 @@ runs the fits, and builds plots for the analysis
 **To run for a single point: (mass,lifetime,era)**
 
 ```bash
-python3 run_datacard.py \
-    -s /path/to/signal_ggH4g.root \
-    -b /path/to/data_EGamma.root \
-    -m 30 -ct 100 -y 2018 \
-    -c1 prompt -c2 asym -c3 displaced
+python3 run_datacard.py -s /path/to/signal_ggH4g.root -b /path/to/data_EGamma.root -m 30 -ct 100 -y 2018 -c1 prompt -c2 asym -c3 displaced
 ```
 
 This builds each category card, runs Combine, makes the postfit plots, and combines the cards into
