@@ -1,5 +1,5 @@
-import ROOT 
-from style import ggHcmsstyle
+import ROOT
+from plotting import ggHcmsstyle
 writeExtraText=True
 
 c= ROOT.TCanvas("c", "CMS Style Polynomial", 800, 700)
