@@ -3,7 +3,7 @@ import os
 import sys 
 import argparse, subprocess
 from plotting.style.ggHcmsstyle import CMSstyle
-from ggHparameters import lumi
+from ggHparameters import lumi, signal_window
 import ggHcuts as cuts
 ROOT.gROOT.SetBatch(True)
 ROOT.ROOT.EnableImplicitMT()
@@ -19,8 +19,8 @@ def run(mass, ctau, year):
     bins=[55, 60, 180]
     var=f"best_4g_corr_mass_m{mass}"
     
-    sig=f"ggH4g_M{mass}_ctau{ctau}_{year}_0_ggH4g_M{mass}_ctau{ctau}_{year}_ggH4g.root"
-    bkg=f"EGamma_{year}_all_ggH4g.root"
+    sig=f"/eos/uscms/store/user/dacampos/analysis/signal/ggH4g_M{mass}_ctau{ctau}_{year}_0_ggH4g_M{mass}_ctau{ctau}_{year}_ggH4g.root"
+    bkg=f"/eos/uscms/store/user/dacampos/analysis/data/EGamma_{year}_updated/EGamma_{year}_all_ggH4g.root"
     
     sig_open=ROOT.TFile.Open(sig)
     sumw=0.0
@@ -44,9 +44,11 @@ def run(mass, ctau, year):
     
     data_ID_histo=data_ID_df.Histo1D(("hist2", f"hist2;4#gamma mass;Events", bins[0], bins[1], bins[2]), f"{var}")
     data_pre_histo=data_pre_df.Histo1D(("hist3", f"hist3;4#gamma mass;Events", bins[0], bins[1], bins[2]), f"{var}")
-    N_data_ID=data_ID_histo.Integral()
-    N_data_pre=data_pre_histo.Integral()
+    lower_sb=f"{var}>={bins[1]} && {var}<{signal_window[0]}"
+    N_data_ID=data_ID_df.Filter(lower_sb).Count().GetValue()
+    N_data_pre=data_pre_df.Filter(lower_sb).Count().GetValue()
     N_sig=signal_histo.Integral()
+    print(f"lower sideband [{bins[1]}, {signal_window[0]}) GeV")
     print("N_ID", N_data_ID)
     print("N_pre", N_data_pre)
     print("N_sig", N_sig)
