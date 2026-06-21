@@ -14,15 +14,18 @@ def combine_workflow(cat, year, mass, lifetime, finalstate, physics):
     subprocess.run(["mv","fitDiagnosticsTest.root",f"fitDiagnosticsTest_m{mass}_ct{lifetime}_{cat}_{year}.root"], check=True)
 
 def combined_datacard(year, cats, mass, lifetime, finalstate, physics):
+    if "none" in cats:
+        print("'none' is the inclusive category and overlaps the exclusive ones; excluding it from the combination.")
+        cats = [c for c in cats if c != "none"]
     if len(cats) < 2:
-        print("Need 2+ categories to combine.")
+        print("Need 2+ exclusive categories to combine.")
         return
     if len(cats) > 3:
-        print("Only 3 categories exist.")
+        print("Only 3 exclusive categories exist.")
         return
 
     inputs = [f"datacard_{physics}_{finalstate}_m{mass}_ct{lifetime}_{c}_{year}.txt" for c in cats]
-    out = f"datacard_{physics}_{finalstate}_m{mass}_ct{lifetime}_combined_{year}.txt"
+    out = f"datacard_{physics}_{finalstate}_m{mass}_ct{lifetime}_combined_{'_'.join(cats)}_{year}.txt"
 
     with open(out, "w") as f:
         subprocess.run(["combineCards.py", *inputs], stdout=f, check=True)
@@ -57,15 +60,13 @@ def run(signal, bkg, cat, year, mass, lifetime, finalstate, physics, bins):
 
 if __name__=="__main__":
     parser = argparse.ArgumentParser("Datacard Processing for year, category")
-    parser.add_argument("-s","--signal", type=str, help="Signal file")
-    parser.add_argument("-b","--background", type=str, help="Background file")
     parser.add_argument("-m","--mass", type=str, help="mass of sample")
     parser.add_argument("-ct","--ctau", type=str, help="lifetime of sample")
     parser.add_argument("-y","--year", type=str, help="year of MC and data")
-    parser.add_argument("-c1","--cat1", dest="c1", type=str, help="choose one of: prompt, displaced, asym, all")
-    parser.add_argument("-c2","--cat2", dest="c2", type=str, help="choose one of: prompt, displaced, asym, all")
-    parser.add_argument("-c3","--cat3", dest="c3", type=str, help="choose one of: prompt, displaced, asym, all")
-    parser.add_argument("-c4","--cat4", dest="c4", type=str, help="choose one of: prompt, displaced, asym, all")
+    parser.add_argument("-c1","--cat1", dest="c1", type=str, help="choose one of: prompt, displaced, asym, none")
+    parser.add_argument("-c2","--cat2", dest="c2", type=str, help="choose one of: prompt, displaced, asym, none")
+    parser.add_argument("-c3","--cat3", dest="c3", type=str, help="choose one of: prompt, displaced, asym, none")
+    parser.add_argument("-c4","--cat4", dest="c4", type=str, help="choose one of: prompt, displaced, asym, none")
 
     parser.add_argument("-process_run2","--process_run2", dest="process_run2", type=int, help="Process all Run 2. 1=yes, 0=no. Will run all mass/lifetime points for all categories and combine the cards")
     parser.add_argument("-process_run3","--process_run3", dest="process_run3", type=int, help="Process all Run 3. 1=yes, 0=no. Will run all mass/lifetime points for all categories and combine the cards")
@@ -75,8 +76,6 @@ if __name__=="__main__":
     mass=args.mass
     lifetime=args.ctau
     year=args.year
-    sig=args.signal
-    bkg=args.background
     process_run2=args.process_run2
     process_run3=args.process_run3
 
@@ -103,6 +102,8 @@ if __name__=="__main__":
                     combined_datacard(year,categories,m,ct,"4g", "ggH")
 
     else:
+        sig=f"/eos/uscms/store/user/dacampos/analysis/signal/ggH4g_M{mass}_ctau{lifetime}_{year}_0_ggH4g_M{mass}_ctau{lifetime}_{year}_ggH4g.root"
+        bkg=f"/eos/uscms/store/user/dacampos/analysis/data/EGamma_{year}_updated/EGamma_{year}_all_ggH4g.root"
         categories = []
         for c in ["c1", "c2", "c3", "c4"]:
             argu = getattr(args, c)

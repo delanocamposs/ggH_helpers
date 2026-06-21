@@ -31,7 +31,7 @@ def categories(mass, lxy1=lxy1, lxy2=lxy2):
         "displaced":f"({p1g})&&({p2g})",
         "asym": f"({p1g})&&({p2l})||({p1l})&&({p2g})",
         "prompt": f"({p1l})&&({p2l})",
-        "all":f"({p1l})&&({p2l})||({p1l})&&({p2g})||({p1g})&&({p2l})||({p1g})&&({p2g})",
+        "none":f"({p1l})&&({p2l})||({p1l})&&({p2g})||({p1g})&&({p2l})||({p1g})&&({p2g})",
             }
 
 def combine(*cuts):

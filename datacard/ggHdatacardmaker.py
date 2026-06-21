@@ -40,7 +40,7 @@ def main(paths, isMC, trees, var, categories, period, bins, lifetime, mass, fina
     cat_dict = {"displaced" : {"cut" : f"(best_4g_phi1_dxy_m{mass}>{lxy1})&&(best_4g_phi2_dxy_m{mass}>{lxy2})", "file" : ""},
                     "asym" : {"cut" : f"(best_4g_phi1_dxy_m{mass}>{lxy1})&&(best_4g_phi2_dxy_m{mass}<{lxy2})||(best_4g_phi1_dxy_m{mass}<{lxy1})&&(best_4g_phi2_dxy_m{mass}>{lxy2})", "file" : ""},
                     "prompt" : {"cut" : f"(best_4g_phi1_dxy_m{mass}<{lxy1})&&(best_4g_phi2_dxy_m{mass}<{lxy2})", "file" : ""},
-                    "all" : {"cut" : f"(best_4g_phi1_dxy_m{mass}<{lxy1})&&(best_4g_phi2_dxy_m{mass}<{lxy2})||(best_4g_phi1_dxy_m{mass}<{lxy1})&&(best_4g_phi2_dxy_m{mass}>{lxy2})||(best_4g_phi1_dxy_m{mass}>{lxy1})&&(best_4g_phi2_dxy_m{mass}<{lxy2})||(best_4g_phi1_dxy_m{mass}>{lxy1})&&(best_4g_phi2_dxy_m{mass}>{lxy2})", "file" : ""}}
+                    "none" : {"cut" : f"(best_4g_phi1_dxy_m{mass}<{lxy1})&&(best_4g_phi2_dxy_m{mass}<{lxy2})||(best_4g_phi1_dxy_m{mass}<{lxy1})&&(best_4g_phi2_dxy_m{mass}>{lxy2})||(best_4g_phi1_dxy_m{mass}>{lxy1})&&(best_4g_phi2_dxy_m{mass}<{lxy2})||(best_4g_phi1_dxy_m{mass}>{lxy1})&&(best_4g_phi2_dxy_m{mass}>{lxy2})", "file" : ""}}
 
 
     output_names = ["rate_histos_m{}_ct{}_{}_{}.root".format(mass, lifetime, cat, year) for cat in categories]

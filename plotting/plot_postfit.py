@@ -78,6 +78,11 @@ def plot(MultiDimFit, fitDiagnosticsTest, cat, year, bins, finalstate, physics, 
         if loop==0:
             w.loadSnapshot("MultiDimFit")
         norm_fit = f2.Get("norm_fit_s")
+        if not isinstance(norm_fit, ROOT.RooArgSet):
+            print(f"skipping postfit plot for {cat} ({year}): combine fit failed, no postfit normalizations")
+            f1.Close()
+            f2.Close()
+            return
         bkg_norm = norm_fit.find(f"{physics}_{finalstate}_m{mass}_ct{lifetime}_{cat}_{year}/background").getVal()
         sig_norm = norm_fit.find(f"{physics}_{finalstate}_m{mass}_ct{lifetime}_{cat}_{year}/signal").getVal()
         print("bkg norm: ", bkg_norm)
@@ -91,9 +96,11 @@ def plot(MultiDimFit, fitDiagnosticsTest, cat, year, bins, finalstate, physics, 
         cloned_data_binned.plotOn(plot,ROOT.RooFit.Binning(bins[0], bins[1], bins[2]),ROOT.RooFit.MarkerStyle(20),ROOT.RooFit.LineColor(ROOT.kBlack),ROOT.RooFit.Name("data_points"), XErrorSize=0, DataError=None)
 
         if data_obs_TH1.Integral()!=0:
-            print("data obs integral: ", data_obs_TH1.Integral())
-            b_model.plotOn(plot,ROOT.RooFit.VisualizeError(r2, 2, ROOT.kFALSE),ROOT.RooFit.FillColor(ROOT.kYellow),ROOT.RooFit.LineColor(ROOT.kBlack),ROOT.RooFit.Name("bkg_2sigma"),ROOT.RooFit.DrawOption("F"))
-            b_model.plotOn(plot,ROOT.RooFit.VisualizeError(r2, 1, ROOT.kFALSE),ROOT.RooFit.FillColor(ROOT.kGreen),ROOT.RooFit.LineColor(ROOT.kBlack),ROOT.RooFit.Name("bkg_1sigma"),ROOT.RooFit.DrawOption("F"))
+            try:
+                b_model.plotOn(plot,ROOT.RooFit.VisualizeError(r2, 2, ROOT.kFALSE),ROOT.RooFit.FillColor(ROOT.kYellow),ROOT.RooFit.LineColor(ROOT.kBlack),ROOT.RooFit.Name("bkg_2sigma"),ROOT.RooFit.DrawOption("F"))
+                b_model.plotOn(plot,ROOT.RooFit.VisualizeError(r2, 1, ROOT.kFALSE),ROOT.RooFit.FillColor(ROOT.kGreen),ROOT.RooFit.LineColor(ROOT.kBlack),ROOT.RooFit.Name("bkg_1sigma"),ROOT.RooFit.DrawOption("F"))
+            except Exception:
+                print("skipping uncertainty bands: fit covariance unusable (likely a degenerate fit)")
         else:
             print("data is 0. ignoring uncertainty bands because uncertainties on fit parameters are unstable")
 
