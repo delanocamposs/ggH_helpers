@@ -82,9 +82,9 @@ if __name__=="__main__":
 
     if process_run2:
         categories=["prompt", "asym", "displaced"]
-        for m in [30]:
-            for ct in [100]:
-                for year in ["2018"]: # no longer using 2016 because the trigger is too inefficient
+        for m in [15,20,30,40,50,55]:
+            for ct in [0,10,20,50,100,1000]:
+                for year in ["2017", "2018"]: # no longer using 2016 because the trigger is too inefficient
                     sig=f"/eos/uscms/store/user/dacampos/analysis/signal/ggH4g_M{m}_ctau{ct}_{year}_0_ggH4g_M{m}_ctau{ct}_{year}_ggH4g.root"
                     bkg=f"/eos/uscms/store/user/dacampos/analysis/data/EGamma_{year}_updated/EGamma_{year}_all_ggH4g.root"
                     for cat in categories:
