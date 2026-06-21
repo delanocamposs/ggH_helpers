@@ -1,3 +1,4 @@
+import sys
 import warnings
 warnings.filterwarnings("ignore", message="The value of the smallest subnormal")
 from datacard.ggHdatacardmaker import *
@@ -102,13 +103,23 @@ if __name__=="__main__":
                     combined_datacard(year,categories,m,ct,"4g", "ggH")
 
     else:
-        sig=signal_path(mass, lifetime, year)
-        bkg=bkg_path(year)
         categories = []
         for c in ["c1", "c2", "c3", "c4"]:
             argu = getattr(args, c)
             if argu is not None:
                 categories.append(argu)
+
+        if not (mass and lifetime and year and categories):
+            mustard = "\033[38;5;136m"
+            red = "\033[1;91m"
+            reset = "\033[0m"
+            print(f"{red}ERROR: mass, lifetime, year and categories need to be specified.{reset}")
+            print(f'{mustard}• for specific point: python3 run_datacard.py -m 30 -ct 100 -y 2018 -c1 prompt -c2 displaced -c3 asym{reset}')
+            print(f"{mustard}• for all mass/lifetime points in run2 or run3: python3 run_datacard.py -process_run2/process_run3 1{reset}")
+            sys.exit(1)
+
+        sig=signal_path(mass, lifetime, year)
+        bkg=bkg_path(year)
         for cat in categories:
             run(sig, bkg, cat, year, mass, lifetime,"4g", "ggH", bins=bins)
         
