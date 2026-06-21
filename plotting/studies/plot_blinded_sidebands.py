@@ -3,7 +3,7 @@ import os
 import sys 
 import argparse, subprocess
 from plotting.style.ggHcmsstyle import CMSstyle
-from ggHparameters import lumi, signal_window
+from ggHparameters import lumi, signal_window, signal_path, bkg_path
 import ggHcuts as cuts
 ROOT.gROOT.SetBatch(True)
 ROOT.ROOT.EnableImplicitMT()
@@ -19,8 +19,8 @@ def run(mass, ctau, year):
     bins=[55, 60, 180]
     var=f"best_4g_corr_mass_m{mass}"
     
-    sig=f"/eos/uscms/store/user/dacampos/analysis/signal/ggH4g_M{mass}_ctau{ctau}_{year}_0_ggH4g_M{mass}_ctau{ctau}_{year}_ggH4g.root"
-    bkg=f"/eos/uscms/store/user/dacampos/analysis/data/EGamma_{year}_updated/EGamma_{year}_all_ggH4g.root"
+    sig=signal_path(mass, ctau, year)
+    bkg=bkg_path(year)
     
     sig_open=ROOT.TFile.Open(sig)
     sumw=0.0

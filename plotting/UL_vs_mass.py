@@ -2,6 +2,7 @@ import ROOT
 import subprocess
 from datacard.ggHdatacardmaker import main as make_datacard
 from run_datacard import combined_datacard
+from ggHparameters import signal_path, bkg_path
 
 
 def get_median_expected_UL(root_file):
@@ -15,7 +16,7 @@ def get_median_expected_UL(root_file):
     return median_UL
 
 
-def scan_mass_lifetime(masses, lifetimes, years, categories, signal_pattern, bkg_pattern, bins,
+def scan_mass_lifetime(masses, lifetimes, years, categories, bins,
                         finalstate="4g", physics="ggH", order_fit=4):
     ROOT.gROOT.SetBatch(True)
     results = []
@@ -23,8 +24,8 @@ def scan_mass_lifetime(masses, lifetimes, years, categories, signal_pattern, bkg
     for mass in masses:
         for ctau in lifetimes:
             for year in years:
-                sig = signal_pattern.format(mass=mass, ctau=ctau, year=year)
-                bkg = bkg_pattern.format(mass=mass, ctau=ctau, year=year)
+                sig = signal_path(mass, ctau, year)
+                bkg = bkg_path(year)
 
                 for cat in categories:
                     make_datacard(paths=[sig, bkg], isMC=[1, 0], trees=["ggH4g", "ggH4g"],
@@ -55,8 +56,5 @@ if __name__ == "__main__":
     years = ["2018"]
     categories = ["low", "asym", "high"]
 
-    signal_pattern = "/eos/uscms/store/user/dacampos/analysis/signal/ggH4g_M{mass}_ctau{ctau}_{year}_0_ggH4g_M{mass}_ctau{ctau}_{year}_ggH4g.root"
-    bkg_pattern = "/eos/uscms/store/user/dacampos/analysis/data/EGamma_{year}_updated/EGamma_{year}_all_ggH4g.root"
-
-    results = scan_mass_lifetime(masses, lifetimes, years, categories, signal_pattern, bkg_pattern, bins=[60, 110, 140])
+    results = scan_mass_lifetime(masses, lifetimes, years, categories, bins=[60, 110, 140])
     print(results)

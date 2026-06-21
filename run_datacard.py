@@ -1,7 +1,7 @@
 import warnings
 warnings.filterwarnings("ignore", message="The value of the smallest subnormal")
 from datacard.ggHdatacardmaker import *
-from ggHparameters import bins
+from ggHparameters import bins, signal_path, bkg_path
 
 def combine_workflow(cat, year, mass, lifetime, finalstate, physics):
     card_txt = f"datacard_{physics}_{finalstate}_m{mass}_ct{lifetime}_{cat}_{year}.txt"
@@ -84,8 +84,8 @@ if __name__=="__main__":
         for m in [15,20,30,40,50,55]:
             for ct in [0,10,20,50,100,1000]:
                 for year in ["2017", "2018"]: # no longer using 2016 because the trigger is too inefficient
-                    sig=f"/eos/uscms/store/user/dacampos/analysis/signal/ggH4g_M{m}_ctau{ct}_{year}_0_ggH4g_M{m}_ctau{ct}_{year}_ggH4g.root"
-                    bkg=f"/eos/uscms/store/user/dacampos/analysis/data/EGamma_{year}_updated/EGamma_{year}_all_ggH4g.root"
+                    sig=signal_path(m, ct, year)
+                    bkg=bkg_path(year)
                     for cat in categories:
                         run(sig, bkg, cat, year, m, ct,"4g", "ggH", bins=bins)
                     combined_datacard(year,categories,m,ct,"4g", "ggH")
@@ -95,15 +95,15 @@ if __name__=="__main__":
         for m in [15,20,30,40,50,55]:
             for ct in [0,10,20,50,100,1000]:
                 for year in ["2022preEE","2022postEE","2023preBPix","2023postBPix","2024"]:
-                    sig=f"/eos/uscms/store/user/dacampos/analysis/signal/ggH4g_M{m}_ctau{ct}_{year}_0_ggH4g_M{m}_ctau{ct}_{year}_ggH4g.root"
-                    bkg=f"/eos/uscms/store/user/dacampos/analysis/data/EGamma_{year}_updated/EGamma_{year}_all_ggH4g.root"
+                    sig=signal_path(m, ct, year)
+                    bkg=bkg_path(year)
                     for cat in categories:
                         run(sig, bkg, cat, year, m, ct,"4g", "ggH", bins=bins)
                     combined_datacard(year,categories,m,ct,"4g", "ggH")
 
     else:
-        sig=f"/eos/uscms/store/user/dacampos/analysis/signal/ggH4g_M{mass}_ctau{lifetime}_{year}_0_ggH4g_M{mass}_ctau{lifetime}_{year}_ggH4g.root"
-        bkg=f"/eos/uscms/store/user/dacampos/analysis/data/EGamma_{year}_updated/EGamma_{year}_all_ggH4g.root"
+        sig=signal_path(mass, lifetime, year)
+        bkg=bkg_path(year)
         categories = []
         for c in ["c1", "c2", "c3", "c4"]:
             argu = getattr(args, c)

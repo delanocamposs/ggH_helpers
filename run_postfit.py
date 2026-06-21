@@ -1,7 +1,7 @@
 import warnings
 warnings.filterwarnings("ignore", message="The value of the smallest subnormal")
 from plotting.plot_postfit import plot
-from ggHparameters import bins
+from ggHparameters import bins, signal_path, bkg_path
 from run_datacard import run as build_datacard, combine_workflow
 import argparse
 
@@ -19,8 +19,6 @@ def run(signal, bkg, cat, year, mass, lifetime, finalstate, physics, bins):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser("Postfit plotting for year, category")
-    parser.add_argument("-s", "--signal", type=str, help="Signal file")
-    parser.add_argument("-b", "--background", type=str, help="Background file")
     parser.add_argument("-m", "--mass", type=str, help="mass of sample")
     parser.add_argument("-ct", "--ctau", type=str, help="lifetime of sample")
     parser.add_argument("-y", "--year", type=str, help="year of MC and data")
@@ -36,8 +34,6 @@ if __name__ == "__main__":
     mass = args.mass
     lifetime = args.ctau
     year = args.year
-    sig = args.signal
-    bkg = args.background
     process_run2 = args.process_run2
     process_run3 = args.process_run3
 
@@ -46,8 +42,8 @@ if __name__ == "__main__":
         for m in [30]:
             for ct in [100]:
                 for year in ["2018"]:  # no longer using 2016 because the trigger is too inefficient
-                    sig = f"/eos/uscms/store/user/dacampos/analysis/signal/ggH4g_M{m}_ctau{ct}_{year}_0_ggH4g_M{m}_ctau{ct}_{year}_ggH4g.root"
-                    bkg = f"/eos/uscms/store/user/dacampos/analysis/data/EGamma_{year}_updated/EGamma_{year}_all_ggH4g.root"
+                    sig = signal_path(m, ct, year)
+                    bkg = bkg_path(year)
                     for cat in categories:
                         run(sig, bkg, cat, year, m, ct, "4g", "ggH", bins=bins)
 
@@ -56,12 +52,14 @@ if __name__ == "__main__":
         for m in [15, 20, 30, 40, 50, 55]:
             for ct in [0, 10, 20, 50, 100, 1000]:
                 for year in ["2022preEE", "2022postEE", "2023preBPix", "2023postBPix", "2024"]:
-                    sig = f"/eos/uscms/store/user/dacampos/analysis/signal/ggH4g_M{m}_ctau{ct}_{year}_0_ggH4g_M{m}_ctau{ct}_{year}_ggH4g.root"
-                    bkg = f"/eos/uscms/store/user/dacampos/analysis/data/EGamma_{year}_updated/EGamma_{year}_all_ggH4g.root"
+                    sig = signal_path(m, ct, year)
+                    bkg = bkg_path(year)
                     for cat in categories:
                         run(sig, bkg, cat, year, m, ct, "4g", "ggH", bins=bins)
 
     else:
+        sig = signal_path(mass, lifetime, year)
+        bkg = bkg_path(year)
         categories = []
         for c in ["c1", "c2", "c3", "c4"]:
             argu = getattr(args, c)

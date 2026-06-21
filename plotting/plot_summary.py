@@ -5,7 +5,7 @@ import subprocess
 from plotting.style import tdrstyle
 from plotting.style import CMS_lumi
 from datacard.ggHdatacardmaker import main
-from ggHparameters import lumi
+from ggHparameters import lumi, signal_path, bkg_path
 import ggHcuts as cuts
 from plotting.plottingtools import fetchError, getPoisson, getPoisson2, save_histos
 ROOT.gROOT.SetBatch(True) 
@@ -43,7 +43,7 @@ def run(mass, ctau, year):
     else:
         years_to_process = [year]
 
-    bkg=f"/eos/uscms/store/user/dacampos/analysis/data/EGamma_{year}_updated/EGamma_{year}_all_ggH4g.root"
+    bkg=bkg_path(year)
     data_ID_df=ROOT.RDataFrame("ggH4g", bkg)
     data_ID_df=data_ID_df.Filter(cuts.combine(cuts.preselection(mass), cuts.trigger(), cuts.dxy_valid(mass), cuts.full_id(mass), cuts.blind(mass)))
     h_data=data_ID_df.Histo1D(("data_hist", f"data_hist;4#gamma mass;Events", bins_data[0], bins_data[1], bins_data[2]), f"{var}")
@@ -51,7 +51,7 @@ def run(mass, ctau, year):
     #signal histogram built separately for each year.
     h_sig_total = None
     for y in years_to_process:
-        sig_y = f"/eos/uscms/store/user/dacampos/analysis/signal/ggH4g_M{mass}_ctau{ctau}_{y}_0_ggH4g_M{mass}_ctau{ctau}_{y}_ggH4g.root"
+        sig_y = signal_path(mass, ctau, y)
         sig_open_y = ROOT.TFile.Open(sig_y)
         sumw_y = 0.0
         with sig_open_y as f:
