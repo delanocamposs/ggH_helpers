@@ -1,4 +1,4 @@
-from ggHparameters import lxy1, lxy2, dxy_min, signal_window, signal_xsec, BR
+from ggHparameters import lxy1, lxy2, dxy_min, signal_window, signal_xsec, BR, lower_sb, upper_sb
 
 def trigger():
     return "HLT_passed==1"
@@ -21,6 +21,12 @@ def mc_weight(sumw):
 def blind(mass, window=signal_window):
     lo,hi = window
     return f"(best_4g_corr_mass_m{mass}<{lo})||(best_4g_corr_mass_m{mass}>{hi})"
+
+def sidebands(mass, lower=lower_sb, upper=upper_sb):
+    lo1,lo2 = lower
+    up1,up2 = upper
+    return (f"(best_4g_corr_mass_m{mass}>={lo1} && best_4g_corr_mass_m{mass}<{lo2}) || "
+            f"(best_4g_corr_mass_m{mass}>{up1} && best_4g_corr_mass_m{mass}<={up2})")
 
 def categories(mass, lxy1=lxy1, lxy2=lxy2):
     p1g=f"best_4g_phi1_dxy_m{mass}>{lxy1}"

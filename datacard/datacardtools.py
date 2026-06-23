@@ -12,7 +12,7 @@ from scipy.special import comb
 from scipy.integrate import simps
 from scipy.stats import beta
 from datacard.ggHfitter import fitBKG
-from ggHparameters import bkg_factor, bkg_scale_factor
+from ggHparameters import fit_bins
 import ggHcuts as cuts
 ROOT.gROOT.SetBatch(False)
 
@@ -77,12 +77,9 @@ def sig_bkg_histos(files, isMC, trees, mass, lifetime, selections, var, output_n
                 hist_j_k.Write()
                 histo_obj[j].append(hist_j_k)
             else:
-                rdf_j_k = rdf_j_k.Filter(cuts.preselection(mass))
-                hist_j_k = rdf_j_k.Histo1D((f"{histo_names[j][k]}", f"{j}_{k};{var};Events", bins[0], bins[1], bins[2]), f"{var}")
-                if bkg_weight:
-                    hist_j_k.Scale(lumi_scaling*bkg_scale_factor*bkg_factor[year][0])
-                else:
-                    hist_j_k.Scale(lumi_scaling*bkg_factor[year][0])
+                rdf_j_k = rdf_j_k.Filter(cuts.combine(cuts.preselection(mass), cuts.full_id(mass), cuts.sidebands(mass)))
+                hist_j_k = rdf_j_k.Histo1D((f"{histo_names[j][k]}", f"{j}_{k};{var};Events", fit_bins[0], fit_bins[1], fit_bins[2]), f"{var}")
+                hist_j_k.Scale(lumi_scaling)
                 hist_j_k.Write()
                 histo_obj[j].append(hist_j_k)
         output_file_j.Close()

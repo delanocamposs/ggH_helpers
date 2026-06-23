@@ -116,6 +116,11 @@ class DatacardWorkspace:
         self.w.Import(bernstein_pdf)
 
 
+    def addFixedYield(self,name,ID,value):
+        pdfName="_".join([name,self.tag])
+        self.contributions.append({'name':name,'pdf':pdfName,'ID':ID,'yield':value})
+
+
     def addFixedYieldFromFile(self,name,ID,filename,histoName,lumi=True):
         pdfName="_".join([name,self.tag])
         f=ROOT.TFile(filename)

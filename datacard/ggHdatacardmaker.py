@@ -72,16 +72,18 @@ def main(paths, isMC, trees, var, categories, period, bins, lifetime, mass, fina
 
     i=0
     for cat in categories:
-        bkg_rate=th1d_histo_obj[i][1].Integral()
+        N_sb=th1d_histo_obj[i][1].Integral()
         dcm_cat_year = DatacardWorkspace(finalstate, cat, period, lifetime, mass, lumi[year], physics)
 
         #we need to fit bkg twice because one fit is used to generate the data and one fit is used for combine fit
         #two jsons with parameters: fit and gen. gen=used to generate data. fit=used in combine.
-        ggHfitter.fitBKG(f"{th1d_filenames[i]}", f"{th1d_histos[i][1]}", f"fit_bkg_m{mass}_ct{lifetime}_{cat}_{year}_fit.root", order=order_fit)
+        ratio = ggHfitter.fitBKG(f"{th1d_filenames[i]}", f"{th1d_histos[i][1]}", f"fit_bkg_m{mass}_ct{lifetime}_{cat}_{year}_fit.root", order=order_fit)
         datacardtools.extract_JSON(f"fit_bkg_m{mass}_ct{lifetime}_{cat}_{year}_fit.root", "w", f"bkg_parameters_m{mass}_ct{lifetime}_{cat}_{year}_fit.json")
 
         ggHfitter.fitBKG(f"{th1d_filenames[i]}", f"{th1d_histos[i][1]}", f"fit_bkg_m{mass}_ct{lifetime}_{cat}_{year}_gen.root", order=order_gen)
         datacardtools.extract_JSON(f"fit_bkg_m{mass}_ct{lifetime}_{cat}_{year}_gen.root", "w", f"bkg_parameters_m{mass}_ct{lifetime}_{cat}_{year}_gen.json")
+
+        bkg_rate=N_sb*ratio
 
         ggHfitter.fitSIG(f"{th1d_filenames[i]}", f"{th1d_histos[i][0]}", f"fit_sig_m{mass}_ct{lifetime}_{cat}_{year}.root")
         datacardtools.extract_JSON(f"fit_sig_m{mass}_ct{lifetime}_{cat}_{year}.root", "w", f"sig_parameters_m{mass}_ct{lifetime}_{cat}_{year}.json")
@@ -96,7 +98,7 @@ def main(paths, isMC, trees, var, categories, period, bins, lifetime, mass, fina
         dcm_cat_year.addSystematic(name=f"PDF_alphas_unc_m{mass}_ct{lifetime}_{cat}_{year}", kind = "lnN", values={"signal":"{}".format(1+PDF_alphas_unc)})
         dcm_cat_year.addSystematic(name=f"bkg_rate_m{mass}_ct{lifetime}_{cat}_{year}", kind = "rateParam", values=[dcm_cat_year.tag, "background", "1", "[0,10]"])
 
-        dcm_cat_year.addFixedYieldFromFile(name="background", ID=1, filename=th1d_filenames[i], histoName=th1d_histos[i][1], lumi=False)
+        dcm_cat_year.addFixedYield(name="background", ID=1, value=bkg_rate)
         dcm_cat_year.addFixedYieldFromFile(name="signal", ID=0, filename=th1d_filenames[i], histoName=th1d_histos[i][0], lumi=True)
 
         workspace_file_cat_year = "datacardInputs_"+dcm_cat_year.tag+".root"

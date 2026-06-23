@@ -1,5 +1,5 @@
 import ROOT
-from ggHparameters import signal_window, dcb_mean, dcb_sigma, dcb_alpha1, dcb_n1, dcb_alpha2, dcb_n2, bernstein_coeff
+from ggHparameters import signal_window, fit_window, lower_sb, upper_sb, dcb_mean, dcb_sigma, dcb_alpha1, dcb_n1, dcb_alpha2, dcb_n2, bernstein_coeff
 ROOT.gROOT.SetBatch(False)
 
 
@@ -94,7 +94,7 @@ class Fitter(object):
         self.w.factory("n2[2,1,50]")
         cList = ROOT.RooArgList()
         for i in range(0,order):
-            self.w.factory("c_"+str(i)+"[0,100]")
+            self.w.factory(f"c_{i}[{bernstein_coeff[0]},{bernstein_coeff[1]}]")
             cList.add(self.w.var("c_"+str(i)))
         bernsteinPDF = ROOT.RooBernsteinFast(order)(bname,bname,self.w.var(poi),cList)
         doubleCB = ROOT.RooDoubleCB(dcbname,dcbname,self.w.var(poi),self.w.var("mean"),self.w.var("sigma"),self.w.var("alpha1"),self.w.var("n1"),self.w.var("alpha2"),self.w.var("n2"))
@@ -107,18 +107,45 @@ class Fitter(object):
 def fitBKG(file, hist, output_name, *, order, POI="mass", verbose=False):
     f = ROOT.TFile(file)
     bkg = f.Get(hist)
+
     fitter = Fitter([POI])
-    fitter.bernstein('model',POI,order=order)
-    fitter.importBinnedData(bkg,[POI])
-    fitter.fit("model","data")
-    chi2 = fitter.projection("model","data",POI,filename=output_name)
+    fitter.importBinnedData(bkg, [POI])
+    fitter.bernstein('model', POI, order=order)
+    fitter.setRange("lower", POI, lower_sb[0], lower_sb[1])
+    fitter.setRange("upper", POI, upper_sb[0], upper_sb[1])
+    fitter.fit("model", "data", fitRange="lower,upper")
+    chi2 = fitter.projection("model", "data", POI, filename=output_name)
+
+    x = fitter.w.var(POI)
+    x.setRange("sr", signal_window[0], signal_window[1])
+    x.setRange("sb_low", lower_sb[0], lower_sb[1])
+    x.setRange("sb_high", upper_sb[0], upper_sb[1])
+    nset = ROOT.RooArgSet(x)
+    pdf = fitter.w.pdf("model")
+    I_sr = pdf.createIntegral(nset, ROOT.RooFit.NormSet(nset), ROOT.RooFit.Range("sr")).getVal()
+    I_sb = (pdf.createIntegral(nset, ROOT.RooFit.NormSet(nset), ROOT.RooFit.Range("sb_low")).getVal()
+            + pdf.createIntegral(nset, ROOT.RooFit.NormSet(nset), ROOT.RooFit.Range("sb_high")).getVal())
+    ratio = I_sr / I_sb if I_sb > 0 else 0.0
+
+    n_fine = 600
+    sr_slice = ROOT.TH1D("sr_slice", "sr_slice", n_fine, signal_window[0], signal_window[1])
+    for b in range(1, n_fine + 1):
+        x.setVal(sr_slice.GetBinCenter(b))
+        sr_slice.SetBinContent(b, pdf.getVal(nset))
+
+    fitter_sr = Fitter([POI])
+    fitter_sr.importBinnedData(sr_slice, [POI])
+    fitter_sr.bernstein('model', POI, order=order)
+    fitter_sr.fit("model", "data")
+    fitter_sr.w.factory(f"sr_sb_ratio[{ratio}]")
+
     output = ROOT.TFile(output_name, "UPDATE")
     output.cd()
-    fitter.w.Write("w")
+    fitter_sr.w.Write("w")
     output.Close()
     if verbose:
-        print("bkg chi-squared={}".format(chi2))
-    return
+        print("bkg chi-squared={} sr_sb_ratio={}".format(chi2, ratio))
+    return ratio
 
 def fitSIG(file, hist, output_name, POI="mass", verbose=False):
     f = ROOT.TFile(file)
@@ -146,13 +173,13 @@ def fitSIGBKG(file, sighist, bkghist,output_name, order, POI="mass"):
     fitter.DCBandBernstein(order,dcbname="model_s",bname="model_b",poi=POI,model_name="model_sb")
     fitter.importBinnedData(signal,[POI], "data_s")
     fitter.importBinnedData(bkg,[POI], "data_b")
-    fitter.setRange("signal_window", "mass", 110, 140)
+    fitter.setRange("signal_window", "mass", signal_window[0], signal_window[1])
     s_fit_result=fitter.fit("model_s","data_s", sumW2=True, fitRange="signal_window")
     print(f"[SIG fit] status={s_fit_result.status()} covQual={s_fit_result.covQual()} "
       f"sigma={fitter.w.var('sigma').getVal():.3f} +/- {fitter.w.var('sigma').getError():.3f} "
       f"mean={fitter.w.var('mean').getVal():.3f}")
-    fitter.setRange("lower", "mass", 80,110)
-    fitter.setRange("upper", "mass", 140,170)
+    fitter.setRange("lower", "mass", lower_sb[0], lower_sb[1])
+    fitter.setRange("upper", "mass", upper_sb[0], upper_sb[1])
     b_fit_result=fitter.fit("model_b","data_b",fitRange="lower,upper", sumW2=False)
     #chi2S = fitter.projection("model_s","data_s",POI,filename=output_name)
     #chi2B = fitter.projection("model_b","data_b",POI,filename=output_name)
