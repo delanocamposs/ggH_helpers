@@ -5,7 +5,7 @@ import subprocess
 from plotting.style import tdrstyle
 from plotting.style import CMS_lumi
 from datacard.ggHdatacardmaker import main
-from ggHparameters import lumi, signal_path, bkg_path
+from ggHparameters import lumi, signal_path, bkg_path, fit_bins
 import ggHcuts as cuts
 from plotting.plottingtools import fetchError, getPoisson, getPoisson2, save_histos
 ROOT.gROOT.SetBatch(True) 
@@ -23,8 +23,8 @@ def run(mass, ctau, year):
     up=0.08
     down=0
     l=ROOT.TLegend(0.5+right-left,0.67+up-down, 0.95+right-left, 0.8+up-down)
-    bins_sig = [45, 80, 170]
-    bins_data = [45, 80, 170]
+    bins_sig = list(fit_bins)
+    bins_data = list(fit_bins)
     bins=bins_data
     var=f"best_4g_corr_mass_m{mass}"
 

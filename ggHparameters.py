@@ -10,8 +10,17 @@ def bkg_path(year):
     return f"{eos_base}/data/EGamma_{year}_updated/EGamma_{year}_all_ggH4g.root"
 
 signal_window = (110, 140)
-n_bins = 60
+
+fit_window = (70, 180)
+lower_sb = (70, 110)
+upper_sb = (140, 180)
+
+n_bins = 30
 bins = [n_bins, signal_window[0], signal_window[1]]
+
+bin_width = (signal_window[1] - signal_window[0]) / n_bins
+n_fit_bins = int(round((fit_window[1] - fit_window[0]) / bin_width))
+fit_bins = [n_fit_bins, fit_window[0], fit_window[1]]
 
 lxy1 = 50
 lxy2 = 50
@@ -22,10 +31,6 @@ signal_xsec = 52.143
 BR = 1e-4
 
 smear_resolution = 0.264
-
-##this weight comes from scaling PRESELECTED 4g to the sidebands of FULLY ID'd 4g data in 2018 EGamma data.
-bkg_scale_factor = 15 / 7099
-bkg_scale_factor_egm = 1 / 7099
 
 ##luminosities in pb^-1 from: https://twiki.cern.ch/twiki/bin/view/CMS/LumiRecommendationsRun2
 lumi = {"2017": 41480,
@@ -40,17 +45,6 @@ lumi = {"2017": 41480,
         #2024 = 110.11 +/- 1.77 fb^-1: https://indico.cern.ch/event/1617597/contributions/6820152/attachments/3184909/5675974/Run%202%20and%20Run%203%20combination.pdf
         "2024": 110110,
         "Run3": (7990 + 26680) + (17960 + 9680) + 110110}
-
-#these dictionary values are scales for the background distribution according to what year is being processed.
-#this needs to be done since hte 0.05124.... factor was derived from comparing sidebands of 2018 preselected vs ID data.
-#if we want to interpolate to any other year having derived the initial scale factor from 2018, all years need their own additional weight normalized by 2018 lumi
-bkg_factor = {"2017": [41480/59830],
-              "2018": [1],
-              "Run2": [(41480+59830)/59830],
-              "2022": [34748/59830],
-              "2023": [27245/59830],
-              "2024": [108920/59830],
-              "Run3": [170857/59830]}
 
 #######IMPORTANT#######
 #since the cross section we use to scale the MC is both ggH+VBF combined, these xsec and lumi unc are derived from adding the unc from
@@ -84,5 +78,5 @@ dcb_n1 = (2, 1, 50)
 dcb_alpha2 = (2, 1, 20)
 dcb_n2 = (2, 1, 50)
 
-bernstein_coeff = (0, 100)
-bernstein_coeff_card = (0, 50)
+bernstein_coeff = (0, 10000)
+bernstein_coeff_card = (0, 10000)

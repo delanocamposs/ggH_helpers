@@ -15,6 +15,7 @@ extraTextFont = 52
 
 lumiTextSize     = 0.3
 lumiTextOffset   = 0.2
+lumiTextRightOffset = 0.1
 
 cmsTextSize      = 0.6
 cmsTextOffset    = 0.0
@@ -71,7 +72,7 @@ def CMS_lumi(pad,  iPeriod,  iPosX, year, lumi, relPosX = relPosX, relPosY = rel
         lumiText += lumi_13TeV + " fb^{-1}"
         lumiText += " (13 TeV)"
     elif ( iPeriod==5 ):
-        lumiText += lumi_13TeV
+        lumiText += lumi_13TeV + " fb^{-1}"
         lumiText += " (13.6 TeV)"
     elif ( iPeriod==7 ):
         if( outOfFrame ):lumiText += "#scale[0.85]{"
@@ -100,7 +101,7 @@ def CMS_lumi(pad,  iPeriod,  iPosX, year, lumi, relPosX = relPosX, relPosY = rel
     latex.SetTextAlign(31) 
     latex.SetTextSize(lumiTextSize*t)    
 
-    latex.DrawLatex(1-r-0.1,1-t+lumiTextOffset*t,lumiText)
+    latex.DrawLatex(1-r-lumiTextRightOffset,1-t+lumiTextOffset*t,lumiText)
 
     if( outOfFrame ):
         latex.SetTextFont(cmsTextFont)

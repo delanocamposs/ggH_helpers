@@ -14,7 +14,7 @@ def run(signal, bkg, cat, year, mass, lifetime, finalstate, physics, bins):
     plot(f"higgsCombineTest.MultiDimFit.mH125_m{mass}_ct{lifetime}_{cat}_{year}.root",
          f"fitDiagnosticsTest_m{mass}_ct{lifetime}_{cat}_{year}.root",
          f"{cat}", f"{year}", bins=bins, finalstate=finalstate, physics=physics,
-         mass=mass, lifetime=lifetime, order=4)
+         mass=mass, lifetime=lifetime)
 
 
 if __name__ == "__main__":
