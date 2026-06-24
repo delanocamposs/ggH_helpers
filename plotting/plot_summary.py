@@ -5,7 +5,7 @@ import subprocess
 from plotting.style import tdrstyle
 from plotting.style import CMS_lumi
 from datacard.ggHdatacardmaker import main
-from ggHparameters import lumi, signal_path, bkg_path, fit_bins, signal_window, order_fit
+from ggHparameters import lumi, signal_path, bkg_path, fit_bins, signal_window, order_fit, lower_sb, upper_sb
 import ggHcuts as cuts
 from plotting.plottingtools import fetchError, getPoisson, getPoisson2, save_histos
 ROOT.gROOT.SetBatch(True) 
@@ -96,9 +96,25 @@ def run(mass, ctau, year, cat):
     bkg_norm = h_data.GetValue().Integral()
     sig_norm = h_sig.GetValue().Integral()
 
+    x.setRange("sig_window", signal_window[0], signal_window[1])
+    sig_window_frac = s_model.createIntegral(ROOT.RooArgSet(x), ROOT.RooFit.NormSet(ROOT.RooArgSet(x)), ROOT.RooFit.Range("sig_window")).getVal()
+    print(f"SIGNAL YIELD total: {sig_norm:.4f}")
+    print(f"SIGNAL YIELD in [{signal_window[0]},{signal_window[1]}]: {sig_norm * sig_window_frac:.4f}")
+
+    x.setRange("sb_low", lower_sb[0], lower_sb[1])
+    x.setRange("sb_high", upper_sb[0], upper_sb[1])
+    nset = ROOT.RooArgSet(x)
+    b_sr = b_model.createIntegral(nset, ROOT.RooFit.NormSet(nset), ROOT.RooFit.Range("sig_window")).getVal()
+    b_sb = (b_model.createIntegral(nset, ROOT.RooFit.NormSet(nset), ROOT.RooFit.Range("sb_low")).getVal()
+            + b_model.createIntegral(nset, ROOT.RooFit.NormSet(nset), ROOT.RooFit.Range("sb_high")).getVal())
+    bkg_sr_ratio = b_sr / b_sb if b_sb > 0 else 0.0
+    bkg_norm_full = bkg_norm / b_sb if b_sb > 0 else bkg_norm
+    print(f"BKG YIELD sideband data: {bkg_norm:.4f}")
+    print(f"BKG YIELD in [{signal_window[0]},{signal_window[1]}]: {bkg_norm * bkg_sr_ratio:.4f}")
+
     # Build the combined S+B model
     n_sig = ROOT.RooRealVar("n_sig", "n_sig", sig_norm)
-    n_bkg = ROOT.RooRealVar("n_bkg", "n_bkg", bkg_norm)
+    n_bkg = ROOT.RooRealVar("n_bkg", "n_bkg", bkg_norm_full)
     sb_model = ROOT.RooAddPdf("model_sb", "S+B model",
         ROOT.RooArgList(s_model, b_model),
         ROOT.RooArgList(n_sig, n_bkg))
@@ -167,15 +183,15 @@ def run(mass, ctau, year, cat):
     if show_bands:
         n_data = data_obs_TH1.Integral()
         print("data obs integral: ", n_data)
-        b_model.plotOn(plot,ROOT.RooFit.VisualizeError(bresult, 2, ROOT.kFALSE),ROOT.RooFit.Normalization(norm_to_use, ROOT.RooAbsReal.NumEvent),ROOT.RooFit.FillColor(ROOT.kYellow),ROOT.RooFit.LineColor(ROOT.kBlack),ROOT.RooFit.Name("bkg_2sigma"),ROOT.RooFit.DrawOption("F"))
-        b_model.plotOn(plot,ROOT.RooFit.VisualizeError(bresult, 1, ROOT.kFALSE),ROOT.RooFit.Normalization(norm_to_use, ROOT.RooAbsReal.NumEvent),ROOT.RooFit.FillColor(ROOT.kGreen),ROOT.RooFit.LineColor(ROOT.kBlack),ROOT.RooFit.Name("bkg_1sigma"),ROOT.RooFit.DrawOption("F"))
-        sb_norm_to_use = norm_to_use + sig_norm
+        b_model.plotOn(plot,ROOT.RooFit.VisualizeError(bresult, 2, ROOT.kFALSE),ROOT.RooFit.Normalization(bkg_norm_full, ROOT.RooAbsReal.NumEvent),ROOT.RooFit.FillColor(ROOT.kYellow),ROOT.RooFit.LineColor(ROOT.kBlack),ROOT.RooFit.Name("bkg_2sigma"),ROOT.RooFit.DrawOption("F"))
+        b_model.plotOn(plot,ROOT.RooFit.VisualizeError(bresult, 1, ROOT.kFALSE),ROOT.RooFit.Normalization(bkg_norm_full, ROOT.RooAbsReal.NumEvent),ROOT.RooFit.FillColor(ROOT.kGreen),ROOT.RooFit.LineColor(ROOT.kBlack),ROOT.RooFit.Name("bkg_1sigma"),ROOT.RooFit.DrawOption("F"))
+        sb_norm_to_use = bkg_norm_full + sig_norm
     else:
         print("data is 0. ignoring uncertainty bands because uncertainties on fit parameters are unstable")
         n_data = 0
-        sb_norm_to_use = norm_to_use
+        sb_norm_to_use = bkg_norm_full
 
-    b_model.plotOn(plot,ROOT.RooFit.LineColor(ROOT.kRed),ROOT.RooFit.LineStyle(2),ROOT.RooFit.Name("bkg_curve"),ROOT.RooFit.Normalization(norm_to_use, ROOT.RooAbsReal.NumEvent))
+    b_model.plotOn(plot,ROOT.RooFit.LineColor(ROOT.kRed),ROOT.RooFit.LineStyle(2),ROOT.RooFit.Name("bkg_curve"),ROOT.RooFit.Normalization(bkg_norm_full, ROOT.RooAbsReal.NumEvent))
     sb_model.plotOn(plot,ROOT.RooFit.LineColor(ROOT.kRed),ROOT.RooFit.Name("sb_curve"),ROOT.RooFit.Normalization(sb_norm_to_use, ROOT.RooAbsReal.NumEvent))
 
     integral_sb = sb_model.getVal(ROOT.RooArgSet(x))
@@ -201,10 +217,9 @@ def run(mass, ctau, year, cat):
     cate = ROOT.TLatex()
     cate.SetTextSize(0.06)
     cate.DrawLatexNDC(0.55, 0.84, rf"c#tau = {ctau} mm, m_{{#phi}} = {mass} GeV")
-    if cat=="asym":
-        cate.DrawLatexNDC(0.55, 0.78, "category: asymmetric")
-    else:
-        cate.DrawLatexNDC(0.55, 0.78, f"category: {cat}")
+    cat_label = {"asym": "asymmetric", "none": "combined", "all": "combined"}.get(cat, cat)
+    cate.DrawLatexNDC(0.55, 0.78, f"category: {cat_label}")
+    cate.DrawLatexNDC(0.55, 0.72, f"order = {order_fit}")
     leg.AddEntry(gres1,"Blinded Data", "pe")
     leg.AddEntry("sb_curve","S+B fit sum", "L")
     leg.AddEntry("bkg_curve", "B component", "L")

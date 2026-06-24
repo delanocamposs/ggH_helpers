@@ -1,6 +1,24 @@
 import ROOT
-from ggHparameters import signal_window, fit_window, lower_sb, upper_sb, dcb_mean, dcb_sigma, dcb_alpha1, dcb_n1, dcb_alpha2, dcb_n2, bernstein_coeff
+from ggHparameters import signal_window, fit_window, lower_sb, upper_sb, dcb_mean, dcb_sigma, dcb_alpha1, dcb_n1, dcb_alpha2, dcb_n2, bernstein_coeff, n_bins
 ROOT.gROOT.SetBatch(False)
+
+
+def _decasteljau_split(ctrl, t):
+    pts = list(ctrl)
+    left = [pts[0]]
+    right = [pts[-1]]
+    while len(pts) > 1:
+        pts = [pts[i] * (1.0 - t) + pts[i + 1] * t for i in range(len(pts) - 1)]
+        left.append(pts[0])
+        right.insert(0, pts[-1])
+    return left, right
+
+
+def bernstein_subinterval(ctrl, u, v):
+    _, right = _decasteljau_split(ctrl, u)
+    s = (v - u) / (1.0 - u)
+    left, _ = _decasteljau_split(right, s)
+    return left
 
 
 class Fitter(object):
@@ -113,7 +131,7 @@ def fitBKG(file, hist, output_name, *, order, POI="mass", verbose=False):
     fitter.bernstein('model', POI, order=order)
     fitter.setRange("lower", POI, lower_sb[0], lower_sb[1])
     fitter.setRange("upper", POI, upper_sb[0], upper_sb[1])
-    fitter.fit("model", "data", fitRange="lower,upper")
+    bkg_fit_result = fitter.fit("model", "data", fitRange="lower,upper")
     chi2 = fitter.projection("model", "data", POI, filename=output_name)
 
     x = fitter.w.var(POI)
@@ -127,21 +145,45 @@ def fitBKG(file, hist, output_name, *, order, POI="mass", verbose=False):
             + pdf.createIntegral(nset, ROOT.RooFit.NormSet(nset), ROOT.RooFit.Range("sb_high")).getVal())
     ratio = I_sr / I_sb if I_sb > 0 else 0.0
 
-    n_fine = 600
-    sr_slice = ROOT.TH1D("sr_slice", "sr_slice", n_fine, signal_window[0], signal_window[1])
-    for b in range(1, n_fine + 1):
-        x.setVal(sr_slice.GetBinCenter(b))
-        sr_slice.SetBinContent(b, pdf.getVal(nset))
+    a_dom = x.getMin()
+    b_dom = x.getMax()
+    full_ctrl = [1.0] + [fitter.w.var(f"c_{i}").getVal() for i in range(order)]
+    u = (signal_window[0] - a_dom) / (b_dom - a_dom)
+    v = (signal_window[1] - a_dom) / (b_dom - a_dom)
+    sr_ctrl = bernstein_subinterval(full_ctrl, u, v)
+    sr_coeffs = [sr_ctrl[i + 1] / sr_ctrl[0] for i in range(order)]
 
     fitter_sr = Fitter([POI])
-    fitter_sr.importBinnedData(sr_slice, [POI])
     fitter_sr.bernstein('model', POI, order=order)
-    fitter_sr.fit("model", "data")
+    for i in range(order):
+        fitter_sr.w.var(f"c_{i}").setVal(sr_coeffs[i])
     fitter_sr.w.factory(f"sr_sb_ratio[{ratio}]")
+
+    have_band = False
+    try:
+        pdf.removeStringAttribute("fitrange")
+        M_band = (bkg.Integral() * ratio) / I_sr if I_sr > 0 else 0.0
+        band_frame = x.frame(ROOT.RooFit.Bins(n_bins), ROOT.RooFit.Range(signal_window[0], signal_window[1]))
+        pdf.plotOn(band_frame, ROOT.RooFit.VisualizeError(bkg_fit_result, 1, ROOT.kFALSE), ROOT.RooFit.Normalization(M_band, ROOT.RooAbsReal.NumEvent), ROOT.RooFit.Name("e1"), ROOT.RooFit.DrawOption("F"))
+        pdf.plotOn(band_frame, ROOT.RooFit.VisualizeError(bkg_fit_result, 2, ROOT.kFALSE), ROOT.RooFit.Normalization(M_band, ROOT.RooAbsReal.NumEvent), ROOT.RooFit.Name("e2"), ROOT.RooFit.DrawOption("F"))
+        c1 = band_frame.getCurve("e1")
+        c2 = band_frame.getCurve("e2")
+        g_band1 = ROOT.TGraph(c1.GetN())
+        g_band2 = ROOT.TGraph(c2.GetN())
+        for i in range(c1.GetN()):
+            g_band1.SetPoint(i, c1.GetX()[i], c1.GetY()[i])
+        for i in range(c2.GetN()):
+            g_band2.SetPoint(i, c2.GetX()[i], c2.GetY()[i])
+        have_band = True
+    except Exception:
+        print("skipping prefit band: sideband fit covariance unusable (likely a degenerate fit)")
 
     output = ROOT.TFile(output_name, "UPDATE")
     output.cd()
     fitter_sr.w.Write("w")
+    if have_band:
+        g_band1.Write("band_1sigma")
+        g_band2.Write("band_2sigma")
     output.Close()
     if verbose:
         print("bkg chi-squared={} sr_sb_ratio={}".format(chi2, ratio))

@@ -3,8 +3,24 @@ import subprocess
 from plotting.style import tdrstyle
 from plotting.style import CMS_lumi
 from datacard.ggHdatacardmaker import main
-from ggHparameters import lumi, order_fit
+from ggHparameters import lumi, order_fit, signal_window
 from plotting.plottingtools import fetchError, getPoisson, getPoisson2
+
+
+def _load_prefit_band(finalstate, physics, mass, lifetime, cat, year):
+    path = f"m{mass}_ct{lifetime}_{cat}_{year}_{finalstate}_{physics}/fit_bkg_m{mass}_ct{lifetime}_{cat}_{year}_fit.root"
+    cf = ROOT.TFile(path)
+    if not cf or cf.IsZombie():
+        return None
+    g1 = cf.Get("band_1sigma")
+    g2 = cf.Get("band_2sigma")
+    if not g1 or not g2:
+        cf.Close()
+        return None
+    g1c = g1.Clone("pf_1sigma")
+    g2c = g2.Clone("pf_2sigma")
+    cf.Close()
+    return g2c, g1c
 
 def plot(MultiDimFit, fitDiagnosticsTest, cat, year, bins, finalstate, physics, mass, lifetime, order=order_fit):
     loop=0
@@ -86,8 +102,9 @@ def plot(MultiDimFit, fitDiagnosticsTest, cat, year, bins, finalstate, physics, 
             return
         bkg_norm = norm_fit.find(f"{physics}_{finalstate}_m{mass}_ct{lifetime}_{cat}_{year}/background").getVal()
         sig_norm = norm_fit.find(f"{physics}_{finalstate}_m{mass}_ct{lifetime}_{cat}_{year}/signal").getVal()
-        print("bkg norm: ", bkg_norm)
-        print("sig norm: ", sig_norm)
+        fit_label = "postfit" if loop==0 else "prefit"
+        print(f"[{fit_label}] SIGNAL YIELD in [{signal_window[0]},{signal_window[1]}]: {sig_norm:.4f}")
+        print(f"[{fit_label}] BKG YIELD in [{signal_window[0]},{signal_window[1]}]: {bkg_norm:.4f}")
 
         #RooFormulaVar's that scale the pdf's from the RooWorkspace based on the norms of the fits
         b_func = ROOT.RooFormulaVar("bkg_func","N_bkg * B(x)",f"1*@0",ROOT.RooArgList(b_model))
@@ -96,6 +113,7 @@ def plot(MultiDimFit, fitDiagnosticsTest, cat, year, bins, finalstate, physics, 
         #plotting. the oreder here matters alot in order to get the brazil plot colors to show up correctly and to get the data points on top of everything
         cloned_data_binned.plotOn(plot,ROOT.RooFit.Binning(bins[0], bins[1], bins[2]),ROOT.RooFit.MarkerStyle(20),ROOT.RooFit.LineColor(ROOT.kBlack),ROOT.RooFit.Name("data_points"), XErrorSize=0, DataError=None)
 
+        prefit_band = _load_prefit_band(finalstate, physics, mass, lifetime, cat, year) if loop==1 else None
         if loop==0 and data_obs_TH1.Integral()!=0:
             try:
                 b_model.plotOn(plot,ROOT.RooFit.VisualizeError(r2, 2, ROOT.kFALSE),ROOT.RooFit.Normalization(bkg_norm, ROOT.RooAbsReal.NumEvent),ROOT.RooFit.FillColor(ROOT.kYellow),ROOT.RooFit.LineColor(ROOT.kBlack),ROOT.RooFit.Name("bkg_2sigma"),ROOT.RooFit.DrawOption("F"))
@@ -104,6 +122,8 @@ def plot(MultiDimFit, fitDiagnosticsTest, cat, year, bins, finalstate, physics, 
             except Exception:
                 print("skipping uncertainty bands: fit covariance unusable (likely a degenerate fit)")
                 show_bands=False
+        elif loop==1 and data_obs_TH1.Integral()!=0 and prefit_band is not None:
+            show_bands=True
         else:
             show_bands=False
             if loop==0:
@@ -114,9 +134,7 @@ def plot(MultiDimFit, fitDiagnosticsTest, cat, year, bins, finalstate, physics, 
         cloned_data_binned.plotOn(plot, ROOT.RooFit.Binning(bins[0], bins[1], bins[2]),ROOT.RooFit.MarkerStyle(20),ROOT.RooFit.LineColor(ROOT.kBlack),ROOT.RooFit.Name("data_points"), XErrorSize=0, DataError=None)
 
         integral_sb = sb_model.getVal(ROOT.RooArgSet(x))
-        print("norm after scaling sb: ", integral_sb)
         integral_b = b_model.getVal(ROOT.RooArgSet(x))
-        print("norm after scaling b: ", integral_b)
 
         y_ax_val=round((bins[2]-bins[1])/(bins[0]),2)
         plot.GetYaxis().SetTitle(f"Events/{y_ax_val} GeV")
@@ -128,25 +146,42 @@ def plot(MultiDimFit, fitDiagnosticsTest, cat, year, bins, finalstate, physics, 
             max_y = max(cs[n]+(fetchError(q,cs[n])[1]-cs[n]) for n in range(len(cs)))
             plot.SetMaximum(2.0*max_y)
         else:
-            plot.SetMaximum(10) 
+            plot.SetMaximum(10)
         plot.Draw()
+
+        g1_top = None
+        g2_top = None
+        if loop==1 and show_bands:
+            g2_top, g1_top = prefit_band
+            g2_top.SetFillColor(ROOT.kYellow)
+            g2_top.SetLineColor(ROOT.kBlack)
+            g2_top.SetLineWidth(1)
+            g1_top.SetFillColor(ROOT.kGreen)
+            g1_top.SetLineColor(ROOT.kBlack)
+            g1_top.SetLineWidth(1)
+            g2_top.Draw("F")
+            g1_top.Draw("F")
+            plot.getCurve("bkg_curve").Draw("L same")
+            plot.getCurve("sb_curve").Draw("L same")
+            ROOT.gPad.RedrawAxis()
 
         #legend and contents to draw on the canvas
         leg = ROOT.TLegend(0.17, 0.5, 0.68, 0.88)
         cate = ROOT.TLatex()
         cate.SetTextSize(0.043)
         cate.DrawLatexNDC(0.59, 0.84, f"c#tau = {lifetime} mm, m_{{#phi}} = {mass} GeV")
-        if cat=="asym":
-            cate.DrawLatexNDC(0.59, 0.78, f"category: asymmetric")
-        else:
-            cate.DrawLatexNDC(0.59, 0.78, f"category: {cat}")
-        cate.DrawLatexNDC(0.59, 0.72, f"order={order}")
+        cat_label = {"asym": "asymmetric", "none": "combined", "all": "combined"}.get(cat, cat)
+        cate.DrawLatexNDC(0.59, 0.78, f"category: {cat_label}")
+        cate.DrawLatexNDC(0.59, 0.72, f"order = {order}")
         leg.AddEntry(gres1,"Background Data", "pe")
         leg.AddEntry("sb_curve","S+B fit sum", "L")
         leg.AddEntry("bkg_curve", "B component", "L")
-        if show_bands:
+        if show_bands and loop==0:
             leg.AddEntry("bkg_1sigma",r"\pm 1 \sigma", "f")
             leg.AddEntry("bkg_2sigma",r"\pm 2 \sigma", "f")
+        elif show_bands:
+            leg.AddEntry(g1_top,r"\pm 1 \sigma", "f")
+            leg.AddEntry(g2_top,r"\pm 2 \sigma", "f")
         else:
             blank_entries = [ROOT.TLine(), ROOT.TLine()]
             for b in blank_entries:
@@ -169,8 +204,11 @@ def plot(MultiDimFit, fitDiagnosticsTest, cat, year, bins, finalstate, physics, 
 
         band_graphs = []
         if show_bands:
-            for cname, color in (("bkg_2sigma", ROOT.kYellow), ("bkg_1sigma", ROOT.kGreen)):
-                bc = plot.getCurve(cname)
+            if loop==0:
+                band_curves = [(plot.getCurve("bkg_2sigma"), ROOT.kYellow), (plot.getCurve("bkg_1sigma"), ROOT.kGreen)]
+            else:
+                band_curves = [(g2_top, ROOT.kYellow), (g1_top, ROOT.kGreen)]
+            for bc, color in band_curves:
                 gb = ROOT.TGraph(bc.GetN())
                 for i in range(bc.GetN()):
                     bxi = bc.GetX()[i]
@@ -278,10 +316,10 @@ def plot(MultiDimFit, fitDiagnosticsTest, cat, year, bins, finalstate, physics, 
         can.cd()
         can.Update()
         if loop==0:
-            can.SaveAs(f"postfit_{cat}_{year}_postfit.png")
-            can.SaveAs(f"postfit_{cat}_{year}_postfit.pdf")
+            can.SaveAs(f"postfit_{cat}_{year}_m{mass}_ct{lifetime}.png")
+            can.SaveAs(f"postfit_{cat}_{year}_m{mass}_ct{lifetime}.pdf")
         else:
-            can.SaveAs(f"postfit_{cat}_{year}_prefit.png")
-            can.SaveAs(f"postfit_{cat}_{year}_prefit.pdf")
+            can.SaveAs(f"prefit_{cat}_{year}_m{mass}_ct{lifetime}.png")
+            can.SaveAs(f"prefit_{cat}_{year}_m{mass}_ct{lifetime}.pdf")
         loop+=1
 
