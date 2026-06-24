@@ -173,6 +173,7 @@ def plot(MultiDimFit, fitDiagnosticsTest, cat, year, bins, finalstate, physics, 
         cat_label = {"asym": "asymmetric", "none": "combined", "all": "combined"}.get(cat, cat)
         cate.DrawLatexNDC(0.59, 0.78, f"category: {cat_label}")
         cate.DrawLatexNDC(0.59, 0.72, f"order = {order}")
+        cate.DrawLatexNDC(0.59, 0.66, fit_label)
         leg.AddEntry(gres1,"Background Data", "pe")
         leg.AddEntry("sb_curve","S+B fit sum", "L")
         leg.AddEntry("bkg_curve", "B component", "L")
