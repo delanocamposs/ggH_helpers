@@ -40,13 +40,11 @@ def combined_datacard(year, cats, mass, lifetime, finalstate, physics):
 
 
 def run(signal, bkg, cat, year, mass, lifetime, finalstate, physics, bins):
-    #only builds the datacard; run combine manually afterwards
     mustard = "\033[38;5;136m"
     teal = "\033[38;5;44m"
     reset = "\033[0m"
     border = "============================================================"
     dirname = f"m{mass}_ct{lifetime}_{cat}_{year}_{finalstate}_{physics}"
-
     print(f"{teal}{border}{reset}")
     print(f"{mustard}• searching for pre-existing directory: {dirname}{reset}")
     if os.path.isdir(dirname):

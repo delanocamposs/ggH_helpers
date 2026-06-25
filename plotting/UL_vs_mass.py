@@ -2,22 +2,51 @@ import ROOT
 import subprocess
 import json
 import os
+import sys
+import argparse
 from datacard.ggHdatacardmaker import main as make_datacard
-from run_datacard import combined_datacard
 from ggHparameters import signal_path, bkg_path, lumi
 from plotting.style import tdrstyle
 
 
+# Run3 only has per-subera signal MC (no aggregated 2022/2023 signal files), so
+# the era->years map uses the suberas that actually have datacards.
+ERA_YEARS = {
+    "Run2": ["2017", "2018"],
+    "Run3": ["2022preEE", "2022postEE", "2023preBPix", "2023postBPix", "2024"],
+}
+ERA_YEARS["Run2Run3"] = ERA_YEARS["Run2"] + ERA_YEARS["Run3"]
+_ERA_ALIASES = {"run2": "Run2", "run3": "Run3",
+                "run2run3": "Run2Run3", "run3run2": "Run2Run3",
+                "run2+run3": "Run2Run3"}
+
+
+def resolve_era(token):
+    """Map a CLI token to (era_label, [years]).
+
+    Accepts a single year tag (e.g. "2018", "2022preEE") or an era keyword
+    (Run2, Run3, Run2Run3 / Run2+Run3, case-insensitive).
+    """
+    key = _ERA_ALIASES.get(token.strip().lower())
+    if key:
+        return key, list(ERA_YEARS[key])
+    return token, [token]
+
+
+def era_lumi(years):
+    return sum(lumi[y] for y in years)
+
+
 # AsymptoticLimits stores one tree entry per quantile. Map the quantileExpected
 # value combine writes to the keys we use everywhere downstream.
-_QUANTILE_KEYS = {-1.0: "obs", 0.025: "exp-2", 0.16: "exp-1",
+_QUANTILE_KEYS = {0.025: "exp-2", 0.16: "exp-1",
                   0.5: "exp0", 0.84: "exp+1", 0.975: "exp+2"}
 
 
 def get_limits(root_file):
     """Return all 95% CL upper limits on r from an AsymptoticLimits root file.
 
-    Returns a dict like {"obs": .., "exp-2": .., "exp-1": .., "exp0": ..,
+    Returns a dict like {"exp-2": .., "exp-1": .., "exp0": ..,
     "exp+1": .., "exp+2": ..}. Missing quantiles are simply absent.
     """
     f = ROOT.TFile.Open(root_file)
@@ -47,43 +76,59 @@ def load_results(filename):
         return json.load(fin)
 
 
-def scan_mass_lifetime(masses, lifetimes, years, categories, bins, finalstate="4g",
-                       physics="ggH", order_fit=4, results_json="limits_UL_vs_mass.json"):
-    """Build/combine datacards and run AsymptoticLimits over the mass/lifetime grid.
+def _combine_cards(labelled_cards, out_txt):
+    """combineCards.py wrapper. labelled_cards is a list of (label, txt) pairs;
+    explicit labels keep channel/nuisance names unique across years."""
+    args = [f"{label}={card}" for label, card in labelled_cards]
+    with open(out_txt, "w") as f:
+        subprocess.run(["combineCards.py", *args], stdout=f, check=True)
+    return out_txt
+
+
+def scan_mass_lifetime(masses, lifetimes, era, years, categories, bins, finalstate="4g",
+                       physics="ggH", order_fit=4, results_json=None):
+    """Build per-(year, category) datacards, statistically combine them across the
+    whole era, and run AsymptoticLimits over the mass/lifetime grid.
+
+    For a single-year era this combines only the categories; for Run2/Run3/Run2Run3
+    it combines every (year, category) channel into one card per (mass, ctau).
 
     Returns (and saves to JSON) a nested dict:
-        results[year][str(ctau)][str(mass)] = {"obs":.., "exp0":.., ...}   # raw r
+        results[era][str(ctau)][str(mass)] = {"exp0":.., "exp-1":.., ...}   # raw r
     Raw r limits are stored; BR scaling is applied at plot time via br_scale.
     """
     ROOT.gROOT.SetBatch(True)
-    results = {y: {} for y in years}
+    if results_json is None:
+        results_json = f"limits_UL_vs_mass_{era}.json"
+    cats = [c for c in categories if c != "none"]
+    results = {era: {}}
     for mass in masses:
         for ctau in lifetimes:
+            labelled_cards = []
             for year in years:
                 sig = signal_path(mass, ctau, year)
                 bkg = bkg_path(year)
-                for cat in categories:
+                for cat in cats:
                     make_datacard(paths=[sig, bkg], isMC=[1, 0], trees=["ggH4g", "ggH4g"],
                                   var=f"best_4g_corr_mass_m{mass}", categories=[cat], period=year,
                                   bins=bins, lifetime=ctau, mass=mass, finalstate=finalstate,
                                   physics=physics, order_fit=order_fit)
+                    card = f"datacard_{physics}_{finalstate}_m{mass}_ct{ctau}_{cat}_{year}.txt"
+                    labelled_cards.append((f"{cat}_{year}", card))
 
-                combined_datacard(year, categories, mass, ctau, finalstate, physics)
+            combined_txt = f"datacard_{physics}_{finalstate}_m{mass}_ct{ctau}_{era}.txt"
+            combined_root = f"datacard_{physics}_{finalstate}_m{mass}_ct{ctau}_{era}.root"
+            _combine_cards(labelled_cards, combined_txt)
+            subprocess.run(["text2workspace.py", combined_txt, "-o", combined_root], check=True)
+            subprocess.run(["combine", "-M", "AsymptoticLimits", combined_root, "-m", "125", "--run", "expected"], check=True)
 
-                cats_combined = [c for c in categories if c != "none"]
-                combined_tag = f"combined_{'_'.join(cats_combined)}"
-                combined_txt = f"datacard_{physics}_{finalstate}_m{mass}_ct{ctau}_{combined_tag}_{year}.txt"
-                combined_root = f"datacard_{physics}_{finalstate}_m{mass}_ct{ctau}_{combined_tag}_{year}.root"
-                subprocess.run(["text2workspace.py", combined_txt, "-o", combined_root])
-                subprocess.run(["combine", "-M", "AsymptoticLimits", combined_root, "-m", "125"])
+            result_root = f"higgsCombineTest_m{mass}_ct{ctau}_{era}.AsymptoticLimits.mH125.root"
+            subprocess.run(["mv", "higgsCombineTest.AsymptoticLimits.mH125.root", result_root], check=True)
 
-                result_root = f"higgsCombineTest_m{mass}_ct{ctau}_{year}.AsymptoticLimits.mH125.root"
-                subprocess.run(["mv", "higgsCombineTest.AsymptoticLimits.mH125.root", result_root])
-
-                lims = get_limits(result_root)
-                if lims:
-                    results[year].setdefault(str(ctau), {})[str(mass)] = lims
-                print(f"m={mass} ct={ctau} year={year}: expected UL on r = {lims.get('exp0')}")
+            lims = get_limits(result_root)
+            if lims:
+                results[era].setdefault(str(ctau), {})[str(mass)] = lims
+            print(f"m={mass} ct={ctau} era={era}: expected UL on r = {lims.get('exp0')}")
 
     save_results(results, results_json)
     return results
@@ -117,32 +162,18 @@ def _line_graph(masses, vals, style, width=2):
     return g
 
 
-def _panel_arrays(panel, blind):
-    """From results[year][ctau] (mass->limits dict) build sorted arrays.
-
-    Keeps only masses that have the full expected band. Returns
-    (masses, dict_of_arrays). 'obs' present only if available and not blind.
-    """
+def _panel_arrays(panel):
     masses = sorted(int(m) for m in panel)
     needed = ["exp-2", "exp-1", "exp0", "exp+1", "exp+2"]
     masses = [m for m in masses if all(k in panel[str(m)] for k in needed)]
     arrays = {k: [panel[str(m)][k] for m in masses] for k in needed}
-    if not blind and masses and all("obs" in panel[str(m)] for m in masses):
-        arrays["obs"] = [panel[str(m)]["obs"] for m in masses]
     return masses, arrays
 
 
-def plot_UL_vs_mass(results, year, ctaus, br_scale=1.0, blind=False,
+def plot_UL_vs_mass(results, era, ctaus, total_lumi=None, br_scale=1.0,
                     ytitle="95% upper limit on BR(H#rightarrow#Phi#Phi)",
-                    extra_labels=("BR(#Phi#rightarrow#gamma#gamma) = 0.5",),
+                    extra_labels=("BR(#Phi#rightarrow#gamma#gamma) = 1",),
                     yrange=None, outname=None):
-    """Multi-panel 95% CL UL vs m_Phi, one panel per lifetime (Brazil bands).
-
-    results   : nested dict from scan_mass_lifetime / load_results
-    year      : which year key to plot
-    ctaus     : list of lifetimes (panel order, left->right)
-    br_scale  : multiply raw r limits by this to get the plotted quantity (BR)
-    """
     ROOT.gROOT.SetBatch(True)
     tdrstyle.setTDRStyle()
     ROOT.gStyle.SetOptStat(0)
@@ -151,7 +182,9 @@ def plot_UL_vs_mass(results, year, ctaus, br_scale=1.0, blind=False,
     ROOT.gStyle.SetGridStyle(3)
     ROOT.gStyle.SetGridWidth(1)
 
-    year_res = results[year] if year in results else results
+    if total_lumi is None:
+        total_lumi = lumi.get(era)
+    year_res = results[era] if era in results else results
     ctaus = [ct for ct in ctaus if str(ct) in year_res]
     n = len(ctaus)
     if n == 0:
@@ -161,7 +194,7 @@ def plot_UL_vs_mass(results, year, ctaus, br_scale=1.0, blind=False,
     # gather scaled arrays per panel + global ranges
     panels, all_y, all_m = [], [], []
     for ct in ctaus:
-        masses, arrays = _panel_arrays(year_res[str(ct)], blind)
+        masses, arrays = _panel_arrays(year_res[str(ct)])
         arrays = {k: [v * br_scale for v in vals] for k, vals in arrays.items()}
         panels.append((ct, masses, arrays))
         for vals in arrays.values():
@@ -174,7 +207,7 @@ def plot_UL_vs_mass(results, year, ctaus, br_scale=1.0, blind=False,
 
     ymin,ymax =(min(all_y) * 0.5, max(all_y) * 2.0) if yrange is None else yrange
     xlo,xhi= min(all_m), max(all_m)
-    lm,rm,tm,bm = 0.17, 0.035, 0.07, 0.14
+    lm,rm,tm,bm = 0.23, 0.035, 0.07, 0.14
     denom = (1.0 / (1 - lm)) + max(n - 2, 0) + (1.0 / (1 - rm) if n > 1 else 0)
     if n == 1:
         denom = 1.0 / (1 - lm - rm)
@@ -219,8 +252,8 @@ def plot_UL_vs_mass(results, year, ctaus, br_scale=1.0, blind=False,
         frame.GetXaxis().SetLabelSize(0.055)
         frame.GetXaxis().SetLabelOffset(-0.005)
         frame.GetYaxis().SetTitle(ytitle if i == 0 else "")
-        frame.GetYaxis().SetTitleSize(0.055)
-        frame.GetYaxis().SetTitleOffset(1.5)
+        frame.GetYaxis().SetTitleSize(0.062)
+        frame.GetYaxis().SetTitleOffset(1.8)
         if i != 0 and n > 1:
             frame.GetYaxis().SetLabelSize(0.0)
         else:
@@ -235,11 +268,6 @@ def plot_UL_vs_mass(results, year, ctaus, br_scale=1.0, blind=False,
             gexp = _line_graph(masses, arrays["exp0"], 2)  # dashed expected
             gexp.Draw("L same")
             keep += [g2, g1, gexp]
-            gobs = None
-            if "obs" in arrays:
-                gobs = _line_graph(masses, arrays["obs"], 1)  # solid observed
-                gobs.Draw("L same")
-                keep.append(gobs)
 
         pad.RedrawAxis()
         pad.RedrawAxis("g")  # grid lines on top of the bands
@@ -255,15 +283,13 @@ def plot_UL_vs_mass(results, year, ctaus, br_scale=1.0, blind=False,
 
         # legend + extra labels only in the first panel
         if i == 0 and masses:
-            leg = ROOT.TLegend(lm + 0.04, 0.65, lm + 0.92, 0.90)
+            leg = ROOT.TLegend(lm + 0.04, 0.65, lm + 1.1, 0.90)
             leg.SetBorderSize(0)
             leg.SetFillStyle(0)
             leg.SetTextSize(0.06)
             leg.AddEntry(g1, "#pm1#sigma", "f")
             leg.AddEntry(g2, "#pm2#sigma", "f")
             leg.AddEntry(gexp, "Expected", "l")
-            if gobs is not None:
-                leg.AddEntry(gobs, "Observed", "l")
             leg.Draw()
             keep.append(leg)
 
@@ -293,7 +319,7 @@ def plot_UL_vs_mass(results, year, ctaus, br_scale=1.0, blind=False,
     head.SetTextFont(42)
     head.SetTextAlign(33)
     head.SetTextSize(0.038)
-    head.DrawLatex(1 - rm, 0.985, f"{lumi[year] / 1000:.2f} fb^{{-1}} (13 TeV)")
+    head.DrawLatex(1 - rm, 0.985, f"{total_lumi / 1000:.2f} fb^{{-1}} (13 TeV)")
     # global x-axis title near the bottom-right
     head.SetTextAlign(31)
     head.SetTextSize(0.045)
@@ -302,28 +328,55 @@ def plot_UL_vs_mass(results, year, ctaus, br_scale=1.0, blind=False,
 
     canv.Update()
     if outname is None:
-        outname = f"UL_vs_mass_{year}"
+        outname = f"UL_vs_mass_{era}"
     canv.SaveAs(f"{outname}.png")
     canv.SaveAs(f"{outname}.pdf")
     return canv
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        "UL vs mass limits. Scans all mass/ctau/category points and builds the "
+        "combined-dataset limit for a single year or a whole era.")
+    parser.add_argument("-y", "--year", type=str,
+                        help="single year (e.g. 2018, 2022preEE) or era: Run2, Run3, Run2Run3")
+    parser.add_argument("-process_run2", "--process_run2", dest="process_run2", type=int,
+                        help="1=run full Run2 (2017+2018) combined")
+    parser.add_argument("-process_run3", "--process_run3", dest="process_run3", type=int,
+                        help="1=run full Run3 (2022/2023/2024 suberas) combined")
+    parser.add_argument("-process_run2run3", "--process_run2run3", dest="process_run2run3", type=int,
+                        help="1=run combined Run2+Run3")
+    parser.add_argument("--rescan", action="store_true",
+                        help="force re-running combine even if a cached json exists")
+    args = parser.parse_args()
+
+    if args.process_run2:
+        era_token = "Run2"
+    elif args.process_run3:
+        era_token = "Run3"
+    elif args.process_run2run3:
+        era_token = "Run2Run3"
+    elif args.year:
+        era_token = args.year
+    else:
+        print("\033[91mERROR: specify -y/--year <year|Run2|Run3|Run2Run3>, or "
+              "-process_run2/-process_run3/-process_run2run3 1.\033[0m")
+        sys.exit(1)
+
+    era, years = resolve_era(era_token)
+
     masses = [15, 20, 30, 40, 50, 55]
     lifetimes = [0, 10, 20, 50, 100, 1000]
-    years = ["2018"]
     categories = ["prompt", "asym", "displaced"]
-
-    results_json = "limits_UL_vs_mass.json"
+    results_json = f"limits_UL_vs_mass_{era}.json"
 
     # Re-use existing limits if present; otherwise run the (slow) combine scan.
-    if os.path.exists(results_json):
-        print(f"loading cached limits from {results_json} (delete it to re-scan)")
+    if os.path.exists(results_json) and not args.rescan:
+        print(f"loading cached limits from {results_json} (pass --rescan to re-run)")
         results = load_results(results_json)
     else:
-        results = scan_mass_lifetime(masses, lifetimes, years, categories,
+        results = scan_mass_lifetime(masses, lifetimes, era, years, categories,
                                      bins=[30, 110, 140], results_json=results_json)
 
-    for year in years:
-        # br_scale: r->BR conversion applied to every y value (= reference BR=1e-4).
-        plot_UL_vs_mass(results, year, lifetimes, br_scale=1e-4)
+    # br_scale: r->BR conversion applied to every y value (= reference BR=1e-4).
+    plot_UL_vs_mass(results, era, lifetimes, total_lumi=era_lumi(years), br_scale=1e-4)

@@ -161,6 +161,8 @@ def fitBKG(file, hist, output_name, *, order, POI="mass", verbose=False):
 
     have_band = False
     try:
+        if bkg_fit_result is None or bkg_fit_result.covQual() < 2:
+            raise RuntimeError("sideband fit covariance unusable (covQual < 2)")
         pdf.removeStringAttribute("fitrange")
         M_band = (bkg.Integral() * ratio) / I_sr if I_sr > 0 else 0.0
         band_frame = x.frame(ROOT.RooFit.Bins(n_bins), ROOT.RooFit.Range(signal_window[0], signal_window[1]))

@@ -109,33 +109,25 @@ def extract_JSON(root_filename, workspace_name, json_filename):
 
 
 def generate_data_hist(file, bins_num, norm, output_name):
-
     f=ROOT.TFile.Open(file)
     w=f.Get("w")
     pdf =w.pdf("model")
     x=w.var("mass")
-    
     h_pdf =pdf.createHistogram("h_pdf", x, ROOT.RooFit.Binning(bins_num))
     h_pdf1 =pdf.createHistogram("h_pdf1", x, ROOT.RooFit.Binning(bins_num))
-
     h_pdf.Scale(norm)
     h_pdf1.Scale(norm)
-
     total_expected = float(h_pdf.Integral())
     if total_expected < 1:
         print("[generate_data_hist] WARNING: expected total events is < 1. A fully empty toy histogram is likely and can be statistically consistent.")
-
     output_file = ROOT.TFile(output_name, "RECREATE")
     h_pdf1.Write()
-
     for i in range(1, h_pdf.GetNbinsX()+1):
         density=h_pdf.GetBinContent(i)
         bw=h_pdf.GetXaxis().GetBinWidth(i)
         h_pdf.SetBinContent(i, np.random.poisson(density))
-
     h_pdf.Write()
     output_file.Close()
-
     return output_name
 
 

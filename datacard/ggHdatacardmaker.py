@@ -36,7 +36,6 @@ def main(paths, isMC, trees, var, categories, period, bins, lifetime, mass, fina
     reset = "\033[0m"
     print(f"{teal}processing datacard for ct={lifetime} mm, mass={mass} GeV, year={year} in categories: {categories}{reset}")
 
-    #combining HL and LH into one category now and renaming to simplify
     cat_dict = {"displaced" : {"cut" : f"(best_4g_phi1_dxy_m{mass}>{lxy1})&&(best_4g_phi2_dxy_m{mass}>{lxy2})", "file" : ""},
                     "asym" : {"cut" : f"(best_4g_phi1_dxy_m{mass}>{lxy1})&&(best_4g_phi2_dxy_m{mass}<{lxy2})||(best_4g_phi1_dxy_m{mass}<{lxy1})&&(best_4g_phi2_dxy_m{mass}>{lxy2})", "file" : ""},
                     "prompt" : {"cut" : f"(best_4g_phi1_dxy_m{mass}<{lxy1})&&(best_4g_phi2_dxy_m{mass}<{lxy2})", "file" : ""},
@@ -60,7 +59,6 @@ def main(paths, isMC, trees, var, categories, period, bins, lifetime, mass, fina
             signal_samples[paths[j]]=trees[j]
 
     selections = []
-
     for cat in cat_dict:    
         if cat in categories:
             selections.append(cat_dict[cat]["cut"])
@@ -89,7 +87,6 @@ def main(paths, isMC, trees, var, categories, period, bins, lifetime, mass, fina
         datacardtools.extract_JSON(f"fit_sig_m{mass}_ct{lifetime}_{cat}_{year}.root", "w", f"sig_parameters_m{mass}_ct{lifetime}_{cat}_{year}.json")
 
         dcm_cat_year.addDCB("signal", "mass", f"sig_parameters_m{mass}_ct{lifetime}_{cat}_{year}.json", resolution={f"nuisance_smear_m{mass}_ct{lifetime}_{cat}_{year}":str(smear_resolution)})
-
         dcm_cat_year.addBernstein("background", "mass", f"bkg_parameters_m{mass}_ct{lifetime}_{cat}_{year}_fit.json")
 
         dcm_cat_year.addSystematic(name=f"nuisance_smear_m{mass}_ct{lifetime}_{cat}_{year}", kind = "param", values=[0.0, 1.0])
